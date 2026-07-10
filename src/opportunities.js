@@ -83,7 +83,7 @@ export function setOppStage(d, oppId, toStage, patch = {}) {
 
 // The §41 'won' gate: a signed contract with a booked start creates the Contract
 // and moves the opportunity to won atomically.
-export function recordContractSigned(d, oppId, { mrr = null, one_time = null, start_date, renewal_date = null, scope = null, brand = null } = {}) {
+export function recordContractSigned(d, oppId, { mrr = null, one_time = null, start_date, renewal_date = null, scope = null, brand = null, contract_type = null, implementation_cost = null, parent_contract_id = null } = {}) {
   const opp = getOpp(d, oppId);
   if (!opp) throw new Error(`no such opportunity: ${oppId}`);
   if (!["proposal", "contracting"].includes(opp.stage))
@@ -92,8 +92,8 @@ export function recordContractSigned(d, oppId, { mrr = null, one_time = null, st
   if (mrr == null && one_time == null) throw new Error("won requires mrr or one_time revenue");
   const lead = getLead(d, opp.lead_id);
   return tx((db) => {
-    const info = db.prepare(`INSERT INTO contracts(opportunity_id,lead_id,brand,mrr,one_time,start_date,renewal_date,scope,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?)`).run(oppId, opp.lead_id, brand || lead?.product || null, mrr, one_time, start_date, renewal_date, scope, now());
+    const info = db.prepare(`INSERT INTO contracts(opportunity_id,lead_id,brand,mrr,one_time,start_date,renewal_date,scope,contract_type,implementation_cost,status,parent_contract_id,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,'active',?,?)`).run(oppId, opp.lead_id, brand || lead?.product || null, mrr, one_time, start_date, renewal_date, scope, contract_type, implementation_cost, parent_contract_id, now());
     db.prepare("UPDATE opportunities SET stage='won', close_date=@cd, updated_at=@t WHERE id=@id").run({ id: oppId, cd: start_date, t: now() });
     return { opportunity: getOpp(db, oppId), contract_id: Number(info.lastInsertRowid) };
   });

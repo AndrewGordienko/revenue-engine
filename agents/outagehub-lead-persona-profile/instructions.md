@@ -28,7 +28,7 @@ For each named person, build a grounded read of:
   where possible.
 - **Perspective / worldview** — the point of view they bring: stated opinions, operational philosophies,
   tools/standards they champion, communities they align with, what they signal that they value.
-- **Decision style** — how a person in their seat and culture tends to evaluate a $1k/$5k/$10k+/month
+- **Decision style** — how a person in their seat and culture evaluates paid implementation, a 30-day workflow pilot, and an annual recurring agreement
   OutageHub deal: fast operational buy, consensus-driven, procurement-gated, proof/pilot-first, referral-driven.
 
 Then translate that into **tone guidance**: one or two concrete sentences on how OutageHub's outreach should

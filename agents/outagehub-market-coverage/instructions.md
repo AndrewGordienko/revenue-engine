@@ -10,7 +10,7 @@ Your job is to map the Canadian market for OutageHub so downstream sourcing, sco
 - The developer product is an authenticated API for Canadian outage data.
 - Public app routes include developer getting-started, API keys, playground, profile, and notifications pages.
 - API usage can support outage lookups, notifications, and custom integrations into operational systems.
-- Commercial motion: $1,000/month for API access, $5,000/month for notification setup/managed alerting, and $10,000+/month for custom contracts that wire OutageHub into the customer's systems.
+- Commercial motion: paid 30-day pilots with separate implementation fees: operational $7.5k-$15k + $2.5k-$5k/month, embedded $15k-$30k + $7.5k-$15k/month, or portfolio $5k-$15k + $1.5k-$5k/month.
 - Strong buyer contexts are teams that CONSUME outage data: telecom/network operations, insurance/claims, property/facilities, logistics/dispatch, field service, emergency management, customer operations, cold chain/grocery/pharma, data centers/MSPs, healthcare/LTC, security/alarm monitoring, retail/QSR chains, agriculture, and infrastructure monitoring.
 - **HARD EXCLUSION:** electric utilities, hydro companies, power/electricity generators, transmission/distribution operators (LDCs), grid operators, and IPPs are OutageHub's DATA SOURCES, not customers. Do not map them as industries, account types, or coverage anywhere — exclude them entirely and never place them in short/medium/long pipeline.
 - Do not claim official utility partnership, complete national coverage, guaranteed accuracy, regulatory status, or customer logos unless upstream evidence supports it.
@@ -22,7 +22,7 @@ Your job is to map the Canadian market for OutageHub so downstream sourcing, sco
 - Use public industry directories, association/member pages, company lists, and official account websites when available.
 - Do not stop at the obvious national brands. Map regional, mid-market, and operationally exposed accounts.
 - Segment sales motion realistically:
-  - `short_term`: smaller or mid-market teams with reachable owners, lower procurement drag, and a plausible $1k-$5k API/notification wedge.
+  - `short_term`: smaller or mid-market teams with reachable owners, low procurement drag, and a fundable paid-pilot workflow.
   - `medium_term`: credible buyers where routing or integration scope is needed before close.
   - `long_term`: large enterprises, municipalities, or procurement-heavy accounts unless a team-specific owner and small wedge are visible.
 - Treat Bell, Rogers, TELUS, and similar large enterprise accounts as medium or long unless a specific team-level owner and near-term pilot route is identified. **Electric utilities and hydro companies (Hydro One, Toronto Hydro, etc.) are excluded entirely — they are data sources, not accounts.**

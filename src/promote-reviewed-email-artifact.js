@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import { appendMessage, readRegistry, readState, writeState } from "./bus.js";
+import { SEQUENCE_POLICIES } from "./sales-plays.js";
 
 const FULL_ARTIFACT_PATH = "data/artifacts/gnk-email-sequence-reviewer-full.json";
 
@@ -112,7 +113,7 @@ function normalizeBodyFields(value) {
 function validate(artifact) {
   const hits = [];
   for (const sequence of artifact.improved_person_email_sequences || []) {
-    if ((sequence.emails || []).length !== 7) {
+    if ((sequence.emails || []).length !== SEQUENCE_POLICIES.gnk.touch_count) {
       hits.push({ company: sequence.company, person_name: sequence.person_name, pattern: "wrong_touch_count" });
     }
     for (const email of sequence.emails || []) {

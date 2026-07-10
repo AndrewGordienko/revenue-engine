@@ -1,6 +1,6 @@
 # Revenue Engine
 
-This repo is a project-local OpenClaw workspace for GNK sales/research agents.
+This repo is a shared revenue-engine workspace for two deliberately different sales motions: GNK high-trust engineering sprints and OutageHub paid operational pilots.
 
 ## What is here
 
@@ -11,6 +11,8 @@ This repo is a project-local OpenClaw workspace for GNK sales/research agents.
 - `src/setup-openclaw.js` registers agents with OpenClaw.
 - `src/run-agent.js` runs an agent and publishes its output into the bus/state.
 - `src/pipeline-capacity.js` calculates standing lead inventory and daily outbound volume from revenue goals.
+- `src/reply-classifier.js` turns replies and objections into deterministic pipeline actions.
+- `src/pipeline-report.js` reports outcomes by product, cohort, and sales play.
 - `src/dashboard-server.js` serves the dashboard and JSON APIs.
 - `NOTES.md` captures project operating notes, including the exact-target ICP doctrine for agent output quality.
 
@@ -18,6 +20,7 @@ This repo is a project-local OpenClaw workspace for GNK sales/research agents.
 
 ```sh
 npm run setup
+npm run research:radar
 npm run research:gnk
 npm run research:icp
 npm run research:growth
@@ -40,9 +43,19 @@ npm run pipeline:gnk
 npm run validate:agents
 npm run openai:status
 npm run dashboard
+npm run classify:reply -- "Yes, let's discuss this next week"
+npm run report:pipeline
 ```
 
 The dashboard defaults to `http://127.0.0.1:8792/`.
+
+## Active commercial motions
+
+GNK targets one signed $40k-$60k engagement in 30 days through warm introductions, observable triggers, and partners. Its four-touch triggered-outbound sequence supports trust; it is not a volume quota. The only external sprint offers are Production AI Workflow, Backend Risk and Stabilization, and Data and Operations Automation. A paid one-week shaping engagement is the fallback.
+
+OutageHub targets $40k of booked first-month revenue through three to four paid pilots. Implementation is priced separately, every pilot proves one decision workflow for 30 days, and the close creates an annual conversion decision. Its five-touch sequence sells operational proof and implementation, not a generic map or low-price API.
+
+The shared Revenue Demand Radar watches hiring, leadership, funding, launches, incidents, migrations, deprecations, roadmaps, regulation, complaints, and partnerships, then assigns each signal to exactly one brand and sales play.
 
 ## OpenClaw Skills
 

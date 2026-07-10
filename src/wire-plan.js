@@ -18,10 +18,9 @@ function assignPlay(lead) {
   const text = `${lead.title} ${lead.segment} ${lead.trigger_event} ${lead.why_now} ${lead.outreach_angle} ${lead.company} ${lead.first_contract_slice}`.toLowerCase();
   if (lead.product === "gnk") {
     if (/\b(ai|agent|agentic|ml|model|llm|genai|copilot)\b/.test(text)) return { play_id: "GNK-AI-01", confident: true };
-    if (/\b(legacy|rescue|incident|modernization|migration|troubled|contractor|rewrite|technical debt)\b/.test(text)) return { play_id: "GNK-MOD-01", confident: true };
-    if (/\b(backend|platform|reliability|infrastructure|scale|api|integration|performance|latency)\b/.test(text)) return { play_id: "GNK-BE-01", confident: true };
+    if (/\b(legacy|rescue|incident|modernization|migration|troubled|contractor|rewrite|technical debt|backend|platform|reliability|infrastructure|scale|api|integration|performance|latency)\b/.test(text)) return { play_id: "GNK-BE-01", confident: true };
     if (/\b(data|automation|workflow|spreadsheet|pipeline|reporting|reconciliation|manual|ops|operations)\b/.test(text)) return { play_id: "GNK-DATA-01", confident: true };
-    return { play_id: "GNK-PROD-01", confident: false }; // default lane
+    return { play_id: "GNK-BE-01", confident: false }; // broad product/rescue work must be narrowed to a critical system path
   }
   // outagehub
   if (/\b(telecom|isp|network|noc|fibre|fiber|wireless|carrier|connectivity)\b/.test(text)) return { play_id: "OHUB-ISP-01", confident: true };
@@ -58,11 +57,13 @@ function main() {
       const { play_id, confident } = assignPlay(view);
       const play = PLAYS_BY_ID[play_id];
       const { score, breakdown } = scoreLead(view, play);
-      const reasons = lead.review_reasons || [];
-      if (!confident && !reasons.some((r) => r.reason === "play_low_confidence"))
-        reasons.push({ reason: "play_low_confidence", assigned: play_id });
+      const originalReasons = lead.review_reasons || [];
+      const reasons = originalReasons.filter((reason) => reason.reason !== "play_low_confidence");
+      if (!confident) reasons.push({ reason: "play_low_confidence", assigned: play_id, strategy_version: STRATEGY_VERSION });
+      const reviewWasOnlyOldPlayAssignment = Boolean(lead.needs_review) && originalReasons.length > 0 && reasons.length === 0;
+      const needsReview = confident ? (reviewWasOnlyOldPlayAssignment ? 0 : (lead.needs_review ? 1 : 0)) : 1;
       database.prepare("UPDATE leads SET play_id=@play, strategy_version=@sv, score=@score, score_breakdown=@bd, needs_review=@nr, review_reasons=@rr, updated_at=@t WHERE id=@id")
-        .run({ play: play_id, sv: STRATEGY_VERSION, score, bd: JSON.stringify(breakdown), nr: confident ? (lead.needs_review ? 1 : 0) : 1, rr: JSON.stringify(reasons), t: now(), id: lead.id });
+        .run({ play: play_id, sv: STRATEGY_VERSION, score, bd: JSON.stringify(breakdown), nr: needsReview, rr: JSON.stringify(reasons), t: now(), id: lead.id });
       report.assigned[play_id] = (report.assigned[play_id] || 0) + 1;
       if (!confident) report.low_confidence++;
       report.scored++;

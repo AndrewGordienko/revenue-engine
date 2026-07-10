@@ -7,8 +7,17 @@
   },
   "commercialTarget": {
     "minimumMonthlyContractValueUsd": 40000,
-    "minimumEngagementLength": "one month",
-    "targetContractShape": "A one-month senior engineering engagement or first paid slice at or above $40k.",
+    "capacityPlanningMonthlyContractValueUsd": 40000,
+    "minimumEngagementLength": "four to six weeks",
+    "targetContractShape": "One fixed-scope Production AI, Backend Stabilization, or Data and Operations Automation Sprint at $40k-$60k, with a 50% deposit or first month paid upfront.",
+    "positioning": "A senior engineering strike team that takes business-critical software and AI projects from stuck or risky to working production systems in four to six weeks.",
+    "namedMethod": ["Shape", "Build", "Prove", "Transfer"],
+    "fallbackOffer": {
+      "name": "Paid Shaping Engagement",
+      "duration": "one week",
+      "priceUsdRange": [7500, 12500],
+      "creditedAgainstSprint": true
+    },
     "qualificationFocus": [
       "pain urgent enough to justify a $40k+ month of work",
       "clear economic or technical buyer with ownership of the problem",
@@ -21,57 +30,41 @@
       "the pain is nice-to-have rather than business-critical",
       "the account is too broad to identify an entry point"
     ],
-    "monthlyRevenueFloorUsd": 80000,
-    "sellerCommissionRate": 0.1,
-    "sellerMonthlyIncomeTargetUsd": 10000,
-    "sellerRequiredClosedRevenueForTargetUsd": 100000,
+    "monthlyRevenueFloorUsd": 40000,
+    "sellerRequiredClosedRevenueForTargetUsd": 40000,
+    "campaignTargets": {
+      "days": 30,
+      "researchedAccounts": 250,
+      "contactsPerAccount": 2,
+      "warmIntroductionAsks": 40,
+      "partnerConversations": 25,
+      "bookedMeetings": 12,
+      "qualifiedConversations": 8,
+      "proposals": 4,
+      "paidWins": 1,
+      "bookedRevenueUsd": 40000,
+      "channelAllocation": { "warm_network": 0.35, "triggered_outbound": 0.45, "partners": 0.2 }
+    },
     "outboundCapacityAssumptions": {
       "workingDaysPerMonth": 22,
-      "sequenceTouchesPerLead": 7,
-      "positiveReplyRate": 0.025,
-      "positiveReplyToQualifiedConversationRate": 0.5,
+      "sequenceTouchesPerLead": 4,
+      "positiveReplyRate": 0.05,
+      "positiveReplyToQualifiedConversationRate": 0.67,
       "qualifiedConversationToClosedDealRate": 0.25,
       "pipelineInventoryBufferRate": 0.25,
       "sendReadyBufferRate": 0.15,
-      "expectedNewLeadsPerProspectingRound": 40,
-      "maxRecommendedProspectingRounds": 40,
+      "expectedNewLeadsPerProspectingRound": 50,
+      "maxRecommendedProspectingRounds": 5,
       "contractBucketSplit": {
         "short_term": 0.6,
         "medium_term": 0.3,
         "long_term": 0.1
       }
     },
-    "dealTiers": [
-      {
-        "tier": "small",
-        "monthlyValueUsdRange": [
-          40000,
-          60000
-        ],
-        "role": "fast-cycle cash-flow deal",
-        "targetSalesMotion": "direct founder, CEO, CTO, VP Engineering, product, or operations buyer with an urgent bounded slice and low procurement drag",
-        "portfolioUse": "primary near-term source of the first $80k-$100k/month"
-      },
-      {
-        "tier": "medium",
-        "monthlyValueUsdRange": [
-          80000,
-          150000
-        ],
-        "role": "expansion or multi-slice engagement",
-        "targetSalesMotion": "starts as a $40k-$60k wedge, then expands into a second or third month if the first slice lands",
-        "portfolioUse": "consistency builder after small deals create cash flow"
-      },
-      {
-        "tier": "large",
-        "monthlyValueUsdRange": [
-          150000,
-          300000
-        ],
-        "role": "longer-cycle strategic engagement",
-        "targetSalesMotion": "nurture only when there is a reachable team-level buyer and a specific initiative GNK can own",
-        "portfolioUse": "upside pipeline, not the monthly survival plan"
-      }
+    "offers": [
+      { "name": "Production AI Workflow Sprint", "priceUsdRange": [40000, 60000] },
+      { "name": "Backend Risk and Stabilization Sprint", "priceUsdRange": [35000, 50000] },
+      { "name": "Data and Operations Automation Sprint", "priceUsdRange": [40000, 60000] }
     ],
     "companySizeGuidance": {
       "tooSmall": "companies unlikely to afford a $40k first month unless a public funding, hiring, outage, launch, or compliance signal shows urgent budget",
@@ -81,13 +74,46 @@
       "tooLarge": "very large enterprises where cold outbound is likely to die in procurement or vendor intake without a warm path or team-specific trigger"
     },
     "portfolioStrategy": [
-      "optimize near-term pipeline around small deals that can close quickly at or above $40k for one month",
-      "source medium deals as expansion candidates that can begin with a bounded $40k-$60k first slice",
-      "keep large opportunities in nurture unless there is a reachable specific buyer and a narrowly scoped team-level problem",
-      "prioritize two closed $40k deals per month as the minimum company cash-flow target and roughly $100k closed revenue per month for the seller's $10k commission target"
+      "run a one-deal, high-trust campaign rather than a volume cold-email machine",
+      "use warm introductions, observable triggers, and delivery/referral partners as three distinct channels",
+      "sell senior ownership and judgment through a fixed sprint with acceptance criteria and a paid shaping fallback",
+      "expand a successful sprint into a three-month ownership pod and managed reliability retainer"
     ]
   },
+  "portfolioStrategy": {
+    "strategyVersion": "plan-2026-07-11",
+    "immediateTargetUsd": 40000,
+    "effortAllocation": { "gnk": 0.6, "outagehub": 0.3, "revenue_engine": 0.1 },
+    "shared": ["CRM and cohort infrastructure", "Demand Radar research", "evidence verification", "reply learning", "reporting"],
+    "neverShared": ["positioning", "pricing", "offers", "proof requirements", "funnel economics", "sequence policy", "closing motion"]
+  },
+  "logicalFunctions": {
+    "demandRadar": ["revenue-demand-radar"],
+    "triggerMonitor": ["gnk-account-sourcing", "outagehub-account-sourcing"],
+    "accountSelector": ["gnk-account-scoring", "outagehub-account-scoring"],
+    "buyerMapper": ["gnk-contact-discovery", "outagehub-contact-discovery"],
+    "evidenceAndContactVerifier": ["gnk-email-finder", "outagehub-email-finder", "audit:contacts"],
+    "outreachComposer": ["gnk-outreach-angle", "gnk-email-drafter", "gnk-email-sequence-drafter", "gnk-email-sequence-reviewer", "outagehub-outreach-angle", "outagehub-email-drafter", "outagehub-email-sequence-drafter", "outagehub-email-sequence-reviewer"],
+    "replyAndObjectionClassifier": ["classify:reply"],
+    "pipelineController": ["gnk-pipeline-capacity", "outagehub-pipeline-capacity", "report:pipeline"]
+  },
   "agents": [
+    {
+      "id": "salesv3-revenue-demand-radar",
+      "slug": "revenue-demand-radar",
+      "name": "Revenue Demand Radar",
+      "role": "Aggregate current market signals, cluster funded problems, and route named accounts to the correct GNK or OutageHub sales play without blending the two motions.",
+      "sequence": 0.5,
+      "brands": ["gnk", "outagehub"],
+      "dependsOn": [],
+      "workspace": "openclaw-workspaces/salesv3-revenue-demand-radar",
+      "agentDir": ".openclaw-agents/salesv3-revenue-demand-radar/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": ["https://www.gnk.software/", "https://www.outagehub.ca/"],
+      "outputs": ["radar_summary", "signal_clusters", "named_account_signals", "offer_demand", "durability_assessment", "trigger_monitor", "recommended_cohorts", "source_notes"],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
     {
       "id": "salesv3-gnk-company-context",
       "slug": "gnk-company-context",
@@ -278,6 +304,7 @@
       "role": "Source named target accounts that match GNK ICP guidance and have a timely public trigger event.",
       "sequence": 7,
       "dependsOn": [
+        "revenue-demand-radar",
         "gnk-company-context",
         "gnk-industry-map",
         "gnk-icp-contact-profile",
@@ -577,7 +604,7 @@
       "id": "salesv3-gnk-email-sequence-drafter",
       "slug": "gnk-email-sequence-drafter",
       "name": "GNK Email Sequence Drafter",
-      "role": "Draft seven-touch per-person outbound email sequences that use the sequence strategy, account intelligence, revenue policy, and first-touch drafts.",
+      "role": "Draft four-touch, high-trust GNK sequences that use trigger evidence, buyer context, the selected sprint, and the approved first-touch voice.",
       "sequence": 15,
       "dependsOn": [
         "gnk-email-drafter",
@@ -616,7 +643,7 @@
       "id": "salesv3-gnk-email-sequence-reviewer",
       "slug": "gnk-email-sequence-reviewer",
       "name": "GNK Email Sequence Reviewer",
-      "role": "Self-criticize and improve the seven-touch outreach sequences using all GNK account intelligence, strategy, revenue policy, and writing rules.",
+      "role": "Review and improve four-touch GNK sequences against evidence, trust, sprint fit, progression, and contact-route controls.",
       "sequence": 16,
       "dependsOn": [
         "gnk-email-sequence-drafter",
@@ -681,7 +708,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -718,7 +745,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -758,7 +785,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -793,7 +820,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -830,7 +857,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -870,7 +897,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -906,7 +933,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations."
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts."
     },
     {
       "id": "salesv3-outagehub-account-sourcing",
@@ -915,6 +942,7 @@
       "role": "Source named target accounts that match OutageHub ICP guidance and have a timely public trigger event.",
       "sequence": 108,
       "dependsOn": [
+        "revenue-demand-radar",
         "outagehub-company-context",
         "outagehub-industry-map",
         "outagehub-icp-contact-profile",
@@ -943,7 +971,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     },
@@ -987,7 +1015,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -1025,7 +1053,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     },
@@ -1058,7 +1086,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations."
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts."
     },
     {
       "id": "salesv3-outagehub-client-dossier",
@@ -1095,7 +1123,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     },
@@ -1140,7 +1168,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "thinking": "high",
       "timeoutSeconds": 1800
@@ -1189,7 +1217,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "thinking": "high"
     },
@@ -1223,7 +1251,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key"
     },
     {
@@ -1266,7 +1294,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     },
@@ -1274,7 +1302,7 @@
       "id": "salesv3-outagehub-email-sequence-drafter",
       "slug": "outagehub-email-sequence-drafter",
       "name": "OutageHub Email Sequence Drafter",
-      "role": "Draft seven-touch per-person outbound email sequences that use the sequence strategy, account intelligence, revenue policy, and first-touch drafts.",
+      "role": "Draft five-touch OutageHub paid-pilot sequences tied to one operational decision, proof path, implementation boundary, and annual conversion.",
       "sequence": 116,
       "dependsOn": [
         "outagehub-email-drafter",
@@ -1312,7 +1340,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     },
@@ -1320,7 +1348,7 @@
       "id": "salesv3-outagehub-email-sequence-reviewer",
       "slug": "outagehub-email-sequence-reviewer",
       "name": "OutageHub Email Sequence Reviewer",
-      "role": "Self-criticize and improve the seven-touch outreach sequences using all OutageHub account intelligence, strategy, revenue policy, and writing rules.",
+      "role": "Review and improve five-touch OutageHub sequences against workflow evidence, paid-pilot integrity, annual expansion, and contact-route controls.",
       "sequence": 117,
       "dependsOn": [
         "outagehub-email-sequence-drafter",
@@ -1362,7 +1390,7 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     },
@@ -1373,6 +1401,7 @@
       "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
       "sequence": 2.5,
       "dependsOn": [
+        "revenue-demand-radar",
         "gnk-company-context",
         "gnk-icp-contact-profile",
         "gnk-offer-map"
@@ -1406,6 +1435,7 @@
       "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
       "sequence": 102.5,
       "dependsOn": [
+        "revenue-demand-radar",
         "outagehub-company-context",
         "outagehub-icp-contact-profile",
         "outagehub-offer-map"
@@ -1435,20 +1465,21 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800
     }
   ],
   "commercialTargets": {
     "outagehub": {
-      "minimumMonthlyContractValueUsd": 1000,
-      "capacityPlanningMonthlyContractValueUsd": 7500,
-      "minimumEngagementLength": "monthly subscription or custom integration contract",
-      "targetContractShape": "Sell OutageHub as a $1k/month outage API, a $5k/month notification/alerting setup, or a $10k+/month custom integration wired into the customer's operational systems.",
+      "minimumMonthlyContractValueUsd": 1500,
+      "capacityPlanningMonthlyContractValueUsd": 10000,
+      "minimumEngagementLength": "paid 30-day pilot followed by an annual agreement",
+      "targetContractShape": "Sell paid implementation plus a 30-day operational, embedded, or portfolio pilot with written success criteria and an annual conversion decision.",
+      "positioning": "A Canadian power-event intelligence layer that tells operational systems which locations are affected, how confident the event is, what changed, and who needs to respond.",
       "qualificationFocus": [
         "Canadian power-outage visibility affects customer support, field operations, logistics, risk, insurance, property, infrastructure, or emergency workflows",
-        "the buyer can justify at least $1k/month for reliable API access, $5k/month for notifications, or $10k+/month for system integration",
+        "the buyer can fund a $5k-$30k implementation and a recurring $1.5k-$15k platform contract tied to one operational decision",
         "there is a clear operational owner who needs outage data before customers, tenants, field teams, or internal stakeholders ask",
         "there is a practical path to an API evaluation, notification pilot, or integration scoping call"
       ],
@@ -1458,20 +1489,32 @@
         "the buyer path is only generic procurement with no operations, data, platform, support, or risk owner",
         "the likely need is a one-off public map lookup rather than recurring API, alerting, or integration value"
       ],
-      "monthlyRevenueFloorUsd": 50000,
-      "sellerCommissionRate": 0.1,
-      "sellerMonthlyIncomeTargetUsd": 10000,
-      "sellerRequiredClosedRevenueForTargetUsd": 100000,
+      "monthlyRevenueFloorUsd": 40000,
+      "sellerRequiredClosedRevenueForTargetUsd": 40000,
+      "campaignTargets": {
+        "days": 30,
+        "researchedAccounts": 150,
+        "contactsPerAccount": 2,
+        "bookedMeetings": 12,
+        "qualifiedConversations": 10,
+        "proposals": 4,
+        "paidWins": 3,
+        "bookedRevenueUsd": 40000,
+        "mrrTargetDaysMin": 60,
+        "mrrTargetDaysMax": 120,
+        "targetMrrUsd": 40000,
+        "channelAllocation": { "regional_isp": 0.27, "software_platform": 0.27, "operations_platform": 0.2, "multi_site_operator": 0.26 }
+      },
       "outboundCapacityAssumptions": {
         "workingDaysPerMonth": 22,
-        "sequenceTouchesPerLead": 6,
-        "positiveReplyRate": 0.06,
-        "positiveReplyToQualifiedConversationRate": 0.55,
-        "qualifiedConversationToClosedDealRate": 0.25,
+        "sequenceTouchesPerLead": 5,
+        "positiveReplyRate": 0.08,
+        "positiveReplyToQualifiedConversationRate": 0.67,
+        "qualifiedConversationToClosedDealRate": 0.4,
         "pipelineInventoryBufferRate": 0.25,
         "sendReadyBufferRate": 0.15,
         "expectedNewLeadsPerProspectingRound": 40,
-        "maxRecommendedProspectingRounds": 40,
+        "maxRecommendedProspectingRounds": 4,
         "contractBucketSplit": {
           "short_term": 0.5,
           "medium_term": 0.35,
@@ -1480,48 +1523,37 @@
       },
       "dealTiers": [
         {
-          "tier": "api_access",
-          "monthlyValueUsdRange": [
-            1000,
-            4999
-          ],
-          "role": "fast evaluation and departmental API access",
-          "targetSalesMotion": "operations, data, product, support, risk, insurance, logistics, or infrastructure owner with a recurring need for Canadian outage data",
-          "portfolioUse": "volume base and proof-building motion"
+          "tier": "portfolio_monitoring_pilot",
+          "implementationUsdRange": [5000, 15000],
+          "monthlyValueUsdRange": [1500, 5000],
+          "targetSalesMotion": "defined site portfolio, one response decision, alerts/webhook, 30-day success review"
         },
         {
-          "tier": "notifications",
-          "monthlyValueUsdRange": [
-            5000,
-            9999
-          ],
-          "role": "managed alerting and notification setup",
-          "targetSalesMotion": "team needs automated notifications for regions, providers, polygons, customers, properties, depots, routes, or operating areas",
-          "portfolioUse": "preferred mid-tier deal for faster MRR growth"
+          "tier": "operational_pilot",
+          "implementationUsdRange": [7500, 15000],
+          "monthlyValueUsdRange": [2500, 5000],
+          "targetSalesMotion": "regional ISP/telecom NOC or support workflow with one triage or communications decision"
         },
         {
-          "tier": "integration",
-          "monthlyValueUsdRange": [
-            10000,
-            50000
-          ],
-          "role": "custom contract to wire outage intelligence into operational systems",
-          "targetSalesMotion": "enterprise or mid-market team needs outage data inside internal dashboards, dispatch, support, risk, claims, property, or incident workflows",
-          "portfolioUse": "highest priority strategic accounts when a real integration owner is reachable"
+          "tier": "embedded_evaluation",
+          "implementationUsdRange": [15000, 30000],
+          "monthlyValueUsdRange": [7500, 15000],
+          "targetSalesMotion": "software platform embeds the intelligence layer in one downstream workflow, then expands by customers, volume, and regions"
         }
       ],
       "companySizeGuidance": {
         "tooSmall": "teams with no recurring Canadian operational footprint or no system that would consume outage data",
-        "targetSmall": "regional operators, SaaS products, property groups, service providers, or infrastructure-adjacent teams that can buy API access or notifications quickly",
+        "targetSmall": "regional operators, software platforms, and multi-site teams that can fund a defined implementation and 30-day workflow pilot",
         "targetMedium": "Canadian or Canada-exposed companies with customer operations, field teams, claims, logistics, property, telecom, energy, insurance, or infrastructure workflows",
         "targetLarge": "large enterprises only when a specific operations, data, platform, support, risk, or incident-management owner and integration use case is visible",
         "tooLarge": "broad enterprises where the only route is generic vendor intake and no outage-sensitive team or workflow is identifiable"
       },
       "portfolioStrategy": [
-        "use $1k/month API deals to create fast adoption and usage proof",
-        "prioritize $5k/month notification opportunities when the account needs automated monitoring or stakeholder alerts",
-        "source $10k+/month custom integration opportunities where outage data would feed internal systems or customer-facing workflows",
-        "keep all pricing and seller economics internal unless the prospect directly asks for pricing"
+        "target $40k in booked first-month revenue through three to four paid pilots, not eighty low-price subscriptions",
+        "charge implementation separately and require written success criteria plus an annual conversion decision",
+        "prefer regional ISPs, Canadian-exposed software platforms, and multi-site operators with a reachable workflow owner",
+        "require at least 70% of customer-funded integration work to be reusable and reject unfunded bespoke features",
+        "treat $40k MRR as a 60-120 day target composed of roughly two embedded customers at $10k MRR and four operational customers at $5k MRR"
       ]
     }
   }

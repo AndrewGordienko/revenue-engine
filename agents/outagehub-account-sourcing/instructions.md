@@ -28,7 +28,7 @@ Last cycle this agent returned 12 national enterprises, which produced a lead li
 - The developer product is an authenticated API for Canadian outage data. Public app routes include developer getting-started, API keys, playground, profile, and notifications pages.
 - The API surface shown in the playground includes `GET https://api.outagehub.ca/v1/outages` with time-window parameters such as `since` and `until`, optional provider filtering, and an `X-API-Key` header.
 - Outage records can include provider, latitude, longitude, polygon, customer count, cause, outage type, planned/unplanned flag, local/TZ/UTC start and end fields, estimated restoration fields, and update timestamps.
-- Commercial motion: $1,000/month for API access, $5,000/month for notification setup/managed alerting, and $10,000+/month for custom contracts that wire OutageHub into the customer's systems.
+- Commercial motion: paid 30-day pilots with separate implementation fees: operational $7.5k-$15k + $2.5k-$5k/month, embedded $15k-$30k + $7.5k-$15k/month, or portfolio $5k-$15k + $1.5k-$5k/month.
 - Strong buyer contexts are teams that CONSUME outage data (not power companies): emergency management, telecom/network operations, insurance/claims, property/facilities management, logistics/dispatch, field service, cold chain/grocery/pharma, data centers/MSPs, healthcare/LTC, security/alarm monitoring, retail/QSR chains, agriculture, and operational risk teams with Canadian exposure.
 - Do not claim official utility partnership, complete national coverage, guaranteed accuracy, regulatory status, customer logos, or implementation details unless a source or upstream artifact explicitly supports it.
 
@@ -43,19 +43,19 @@ Last cycle this agent returned 12 national enterprises, which produced a lead li
 - Separate observed facts from sales interpretation.
 - Do not invent customers, funding, hiring, incidents, migrations, or transformation programs.
 - Prefer accounts where senior engineering help could plausibly matter: product delivery risk, backend complexity, data workflow pain, internal tooling gaps, legacy modernization, production stability, or high-consequence operations.
-- Prefer accounts where the likely first contract can plausibly meet or exceed $1k for one month of outage intelligence access, notification setup, or integration work.
+- Prefer accounts where the likely first contract can fund a $5k-$30k implementation plus a paid 30-day pilot with written success criteria.
 - Use `outagehub-revenue-strategy` to classify each account as `small`, `medium`, or `large`, and to explain whether it belongs in the near-term send list, medium expansion pipeline, or large nurture pipeline.
 - Use `outagehub-pipeline-capacity` to decide how aggressively to refill the CRM. Source toward `pipeline_targets.total_leads_required`, `recommended_prospecting.lead_gap`, and the `bucket_targets` split instead of assuming 100 leads is enough.
 - Source by contract-shaped pain, buyer reachability, and deal velocity first. Industry is a supporting signal, not the primary filter.
 - Use `outagehub-boutique-growth-playbook` to prefer account types, trigger types, route-in patterns, and wedge opportunities that historically helped API/data products win early clients.
 - Prefer accounts where the outreach can credibly lead with diagnosis, point of view, founder expertise, or a bounded first slice rather than a generic "we build software" pitch.
-- Prioritize accounts that can help OutageHub reach at least $50k/month in company revenue and roughly $100k/month in closed revenue for the seller's $10k commission target, but keep this economics layer internal.
+- Prioritize accounts that can become one of three to four paid pilots contributing to $40k of booked first-month revenue and then convert to an annual recurring agreement.
 - When the capacity plan shows short-term bucket gaps, bias returned accounts toward direct economic or technical buyers with current triggers and low procurement drag. Do not pad long-term nurture accounts just to increase volume.
 - Treat buyer reachability as a required sourcing dimension: identify a concrete public path to the likely outage-workflow owner or credible router, not just a company name.
 - Do not use "CEO", "president", or broad C-suite as the default `likely_buyer_or_router` for large companies. For a large telecom, insurer, bank, logistics firm, REIT, municipality, or infrastructure company, find the manager/director/team lead who owns the outage-sensitive workflow: network operations, service assurance, NOC, field operations, incident management, customer operations, claims operations, facilities/property operations, dispatch, business continuity, data/API/product, or integrations.
 - For every target account, include a `manager_lit_up_hypothesis`: the named role or publicly visible person/team likely under pressure, the specific outage-sensitive surface they own, and why OutageHub could help. If you cannot identify at least a role-level owner plus surface, put the account in `near_misses` or set reachability low.
 - Avoid giant enterprises unless the trigger points to a specific team, product, or initiative where OutageHub could realistically enter.
-- Avoid companies that are probably too small to buy a $1k first month or too large to reach without procurement, unless the public trigger gives a clear exception.
+- Avoid companies too small to fund implementation or too large to reach without procurement, unless the public trigger gives a clear exception.
 - Keep every recommendation practical enough for account list building and contact sourcing.
 
 ## Trigger Events To Look For
@@ -79,7 +79,7 @@ Score each account with:
 - `reachability_score`: 1-5, where 5 means there is a clear path to a relevant working problem owner or credible internal router; cap at 2 if the only visible route is a CEO/C-suite target, generic inbox, or vendor intake.
 - `confidence`: `high`, `medium`, or `low`, based on evidence quality.
 
-Use `near_misses` for companies that looked relevant but lack a credible trigger, are too broad, have weak OutageHub fit, are unlikely to support a $1k first month, or lack a practical path to the buyer.
+Use `near_misses` for companies that lack a credible trigger, decision workflow, funded pilot path, or practical route to the buyer.
 
 ## Output Contract
 

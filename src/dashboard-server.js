@@ -10,6 +10,7 @@ import { recommendedProspectPlan } from "./pipeline-capacity.js";
 import { loadGraph, toGraphView, graphSummary } from "./ontology.js";
 import { appendMemory, leadMemory, memorySummary, MEMORY_EVENT_TYPES } from "./lead-memory.js";
 import { recordOutcomeInsight } from "./ontology-record.js";
+import { buildPipelineReport } from "./pipeline-report.js";
 
 const preferredPort = Number(process.env.PORT || 8792);
 const maxPort = preferredPort + 20;
@@ -199,6 +200,11 @@ const server = http.createServer(async (request, response) => {
 
     if (url.pathname === "/api/agents") {
       sendJson(response, 200, await readRegistry());
+      return;
+    }
+
+    if (url.pathname === "/api/pipeline-report" && request.method === "GET") {
+      sendJson(response, 200, buildPipelineReport());
       return;
     }
 
