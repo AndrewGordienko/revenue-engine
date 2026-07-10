@@ -1,0 +1,117 @@
+# Revenue Engine
+
+This repo is a project-local OpenClaw workspace for GNK sales/research agents.
+
+## What is here
+
+- `agents/registry.json` defines the agents and their output contracts.
+- `data/messages.jsonl` is the append-only project bus for agent events and handoffs.
+- `data/state.json` is the current shared state that the dashboard reads.
+- `openclaw-workspaces/` contains repo-local OpenClaw workspaces for each agent.
+- `src/setup-openclaw.js` registers agents with OpenClaw.
+- `src/run-agent.js` runs an agent and publishes its output into the bus/state.
+- `src/pipeline-capacity.js` calculates standing lead inventory and daily outbound volume from revenue goals.
+- `src/dashboard-server.js` serves the dashboard and JSON APIs.
+- `NOTES.md` captures project operating notes, including the exact-target ICP doctrine for agent output quality.
+
+## Commands
+
+```sh
+npm run setup
+npm run research:gnk
+npm run research:icp
+npm run research:growth
+npm run research:offer
+npm run research:capacity
+npm run research:accounts
+npm run research:score
+npm run research:contacts
+npm run research:persona
+npm run research:dossier
+npm run research:angles
+npm run research:sequence
+npm run research:emails
+npm run research:drafts
+npm run find:emails
+npm run plan:capacity
+npm run guess:emails
+npm run apply:email-patterns
+npm run pipeline:gnk
+npm run validate:agents
+npm run openai:status
+npm run dashboard
+```
+
+The dashboard defaults to `http://127.0.0.1:8792/`.
+
+## OpenClaw Skills
+
+Two OpenClaw skills are wired into the agents (installed into the shared managed skills directory by `npm run setup`):
+
+- **`multi-search-engine`** — the web-research agents (company context, account sourcing, contact discovery, client dossier, email finder, etc.) are instructed to query several engines and cross-check results instead of trusting one provider. This block is injected centrally in `src/run-agent.js`, so no per-agent instruction files change.
+- **`ontology`** — a shared, typed knowledge graph of `Company`, `Person`, `Deal`, `Investor`, `Introduction`, and `Conversation` entities (with `works_at` / `buyer_at` / `has_deal` / `deal_contact` / `invested_in` / `introduced_by` / `had_conversation` relations). Agents query the graph instead of parsing Markdown, and the runner records sourcing/contact output into it automatically.
+
+The authoritative graph lives at `data/ontology/graph.jsonl` (schema in `data/ontology/schema.yaml`). It uses the exact op format the skill reads, so the skill's own CLI (run from the project root) sees the same graph.
+
+```sh
+npm run ontology:backfill                                  # rebuild the graph from the CRM leads
+npm run ontology                                           # graph stats
+npm run ontology -- query --type Company --where '{"product":"gnk"}'
+npm run ontology -- related --id <company_id> --rel has_deal
+npm run ontology:validate                                  # validate via the ontology skill
+```
+
+## Agent Communication
+
+Agents communicate through the project JSON bus, not by reading each other's Markdown files. Each run receives:
+
+- declared upstream dependency status from `agents/registry.json`
+- recent relevant events from `data/messages.jsonl`
+- upstream artifacts from `data/state.json`
+- declared input files, when an agent needs local account data
+
+When an agent finishes, `src/run-agent.js` publishes its artifact to `data/state.json`, appends an artifact event to `data/messages.jsonl`, and sends handoff events to downstream agents that declare it in `dependsOn`.
+
+## Lead Persona Profile Agent
+
+After contact discovery, the `gnk-lead-persona-profile` and `outagehub-lead-persona-profile` agents
+research each **named person** and capture their individual culture, mindset, communication style, and
+perspective — the "vibe" of the lead. Targeting the CEO of a national enterprise is a different culture
+and tempo than a manager at a startup, so this read tells the outreach agents how to sound to that
+specific person. The read is written back in two places:
+
+- **Lead records** — `persona_vibe`, `culture_context`, `mindset`, `communication_style`, `perspective`,
+  `decision_style`, `tone_guidance` (visible in the dashboard lead detail and CSV export).
+- **Knowledge tree** — the person's `Person` node in `data/ontology/graph.jsonl` gets the vibe properties,
+  plus a per-person `Insight` node (`kind: lead-persona`) so the read shows up in the 3D graph.
+
+The `outreach-angle` stage depends on this agent, so the vibe influences the generated messaging.
+
+```sh
+npm run research:persona        # GNK
+npm run research:ohub:persona   # OutageHub
+```
+
+### API-key runtime (not codex)
+
+These persona agents are flagged `"execution": "api-key"` in `agents/registry.json`. Unlike the other
+agents, which run through the OpenClaw Gateway (the codex runtime), they run the **embedded local agent**
+(`openclaw agent --local`), which talks to the OpenAI API directly. This skips the codex remote "compact"
+step that has been failing on the gateway. The runner reads the OpenAI key from `OPENAI_API_KEY` or, if
+unset, from `~/.codex/auth.json`, and injects it into the child process — no manual shell export needed.
+
+## OpenAI API
+
+The registered agents use `openai/gpt-5.4-mini` by default. Verify the active OpenAI route with:
+
+```sh
+npm run openai:status
+```
+
+To replace or add an OpenAI API key for OpenClaw, run:
+
+```sh
+openclaw models auth paste-api-key --provider openai --profile-id openai:manual
+```
+
+Runtime state and credentials live under `.openclaw-agents/`, which is intentionally ignored by git.

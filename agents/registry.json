@@ -1,0 +1,1528 @@
+{
+  "project": "salesv3",
+  "bus": {
+    "messages": "data/messages.jsonl",
+    "state": "data/state.json",
+    "artifacts": "data/artifacts"
+  },
+  "commercialTarget": {
+    "minimumMonthlyContractValueUsd": 40000,
+    "minimumEngagementLength": "one month",
+    "targetContractShape": "A one-month senior engineering engagement or first paid slice at or above $40k.",
+    "qualificationFocus": [
+      "pain urgent enough to justify a $40k+ month of work",
+      "clear economic or technical buyer with ownership of the problem",
+      "reachable path to a real conversation through email or public company routing",
+      "specific contract-sized slice GNK can credibly own"
+    ],
+    "disqualifyWhen": [
+      "the likely work is too small for a $40k first month",
+      "the buyer path is unclear or only generic/no-reply channels are visible",
+      "the pain is nice-to-have rather than business-critical",
+      "the account is too broad to identify an entry point"
+    ],
+    "monthlyRevenueFloorUsd": 80000,
+    "sellerCommissionRate": 0.1,
+    "sellerMonthlyIncomeTargetUsd": 10000,
+    "sellerRequiredClosedRevenueForTargetUsd": 100000,
+    "outboundCapacityAssumptions": {
+      "workingDaysPerMonth": 22,
+      "sequenceTouchesPerLead": 7,
+      "positiveReplyRate": 0.025,
+      "positiveReplyToQualifiedConversationRate": 0.5,
+      "qualifiedConversationToClosedDealRate": 0.25,
+      "pipelineInventoryBufferRate": 0.25,
+      "sendReadyBufferRate": 0.15,
+      "expectedNewLeadsPerProspectingRound": 40,
+      "maxRecommendedProspectingRounds": 40,
+      "contractBucketSplit": {
+        "short_term": 0.6,
+        "medium_term": 0.3,
+        "long_term": 0.1
+      }
+    },
+    "dealTiers": [
+      {
+        "tier": "small",
+        "monthlyValueUsdRange": [
+          40000,
+          60000
+        ],
+        "role": "fast-cycle cash-flow deal",
+        "targetSalesMotion": "direct founder, CEO, CTO, VP Engineering, product, or operations buyer with an urgent bounded slice and low procurement drag",
+        "portfolioUse": "primary near-term source of the first $80k-$100k/month"
+      },
+      {
+        "tier": "medium",
+        "monthlyValueUsdRange": [
+          80000,
+          150000
+        ],
+        "role": "expansion or multi-slice engagement",
+        "targetSalesMotion": "starts as a $40k-$60k wedge, then expands into a second or third month if the first slice lands",
+        "portfolioUse": "consistency builder after small deals create cash flow"
+      },
+      {
+        "tier": "large",
+        "monthlyValueUsdRange": [
+          150000,
+          300000
+        ],
+        "role": "longer-cycle strategic engagement",
+        "targetSalesMotion": "nurture only when there is a reachable team-level buyer and a specific initiative GNK can own",
+        "portfolioUse": "upside pipeline, not the monthly survival plan"
+      }
+    ],
+    "companySizeGuidance": {
+      "tooSmall": "companies unlikely to afford a $40k first month unless a public funding, hiring, outage, launch, or compliance signal shows urgent budget",
+      "targetSmall": "founder-led or recently funded software companies with a direct buyer and one business-critical engineering slice",
+      "targetMedium": "growth-stage software companies with named engineering, product, operations, or data leaders and visible delivery pressure",
+      "targetLarge": "upper mid-market companies only when the route is to a specific team or initiative, not generic enterprise procurement",
+      "tooLarge": "very large enterprises where cold outbound is likely to die in procurement or vendor intake without a warm path or team-specific trigger"
+    },
+    "portfolioStrategy": [
+      "optimize near-term pipeline around small deals that can close quickly at or above $40k for one month",
+      "source medium deals as expansion candidates that can begin with a bounded $40k-$60k first slice",
+      "keep large opportunities in nurture unless there is a reachable specific buyer and a narrowly scoped team-level problem",
+      "prioritize two closed $40k deals per month as the minimum company cash-flow target and roughly $100k closed revenue per month for the seller's $10k commission target"
+    ]
+  },
+  "agents": [
+    {
+      "id": "salesv3-gnk-company-context",
+      "slug": "gnk-company-context",
+      "name": "GNK Company Context",
+      "role": "Research the GNK site and maintain the shared truth about what GNK does.",
+      "sequence": 1,
+      "dependsOn": [],
+      "workspace": "openclaw-workspaces/salesv3-gnk-company-context",
+      "agentDir": ".openclaw-agents/salesv3-gnk-company-context/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "company_summary",
+        "service_lanes",
+        "target_pressures",
+        "sales_implications",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-icp-contact-profile",
+      "slug": "gnk-icp-contact-profile",
+      "name": "GNK ICP Contact Profile",
+      "role": "Turn GNK company context into ideal customer profiles and contact targeting guidance.",
+      "sequence": 2,
+      "dependsOn": [
+        "gnk-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-icp-contact-profile",
+      "agentDir": ".openclaw-agents/salesv3-gnk-icp-contact-profile/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "icp_summary",
+        "priority_segments",
+        "buyer_personas",
+        "contact_titles",
+        "trigger_events",
+        "fit_signals",
+        "disqualifiers",
+        "commercial_floor_signals",
+        "reachability_signals",
+        "outreach_angles",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-boutique-growth-playbook",
+      "slug": "gnk-boutique-growth-playbook",
+      "name": "GNK Boutique Growth Playbook",
+      "role": "Research how successful software boutiques and consultancies acquired clients and translate the lessons into GNK sales strategy policy.",
+      "sequence": 3,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-icp-contact-profile"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-boutique-growth-playbook",
+      "agentDir": ".openclaw-agents/salesv3-gnk-boutique-growth-playbook/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/",
+        "https://www.cognizant.com/",
+        "https://www.thoughtworks.com/",
+        "https://www.epam.com/",
+        "https://www.globant.com/",
+        "https://www.endava.com/"
+      ],
+      "outputs": [
+        "playbook_summary",
+        "companies_studied",
+        "historical_patterns",
+        "targeting_lessons",
+        "offer_lessons",
+        "credibility_lessons",
+        "sales_motion_lessons",
+        "response_generation_lessons",
+        "strategic_gaps_for_gnk",
+        "agent_policy_updates",
+        "experiments_to_run",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-offer-map",
+      "slug": "gnk-offer-map",
+      "name": "GNK Offer Map",
+      "role": "Turn GNK company and ICP context into per-segment pain, outcome, proof, and why-buy-now offer maps.",
+      "sequence": 4,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-icp-contact-profile",
+        "gnk-boutique-growth-playbook"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-offer-map",
+      "agentDir": ".openclaw-agents/salesv3-gnk-offer-map/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "offer_map_summary",
+        "segment_offer_maps",
+        "cross_segment_offer_principles",
+        "urgency_triggers",
+        "proof_assets_to_build",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-revenue-strategy",
+      "slug": "gnk-revenue-strategy",
+      "name": "GNK Revenue Strategy",
+      "role": "Turn GNK commercial targets, commission economics, and company-size constraints into deal-tier sourcing and scoring policy.",
+      "sequence": 5,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-icp-contact-profile",
+        "gnk-boutique-growth-playbook",
+        "gnk-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-revenue-strategy",
+      "agentDir": ".openclaw-agents/salesv3-gnk-revenue-strategy/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "strategy_summary",
+        "revenue_math",
+        "deal_tiers",
+        "company_size_boundaries",
+        "target_industry_logic",
+        "portfolio_strategy",
+        "sourcing_rules",
+        "scoring_rules",
+        "seller_commission_plan",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-pipeline-capacity",
+      "slug": "gnk-pipeline-capacity",
+      "name": "GNK Pipeline Capacity",
+      "role": "Calculate required pipeline inventory, daily outbound volume, and lead-bucket refill targets from GNK revenue goals.",
+      "sequence": 6,
+      "dependsOn": [
+        "gnk-revenue-strategy"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-pipeline-capacity",
+      "agentDir": ".openclaw-agents/salesv3-gnk-pipeline-capacity/agent",
+      "runner": "local",
+      "model": "local/deterministic",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "capacity_summary",
+        "revenue_goal",
+        "conversion_assumptions",
+        "pipeline_targets",
+        "bucket_targets",
+        "recommended_split",
+        "recommended_prospecting",
+        "operating_rules",
+        "source_notes"
+      ]
+    },
+    {
+      "id": "salesv3-gnk-account-sourcing",
+      "slug": "gnk-account-sourcing",
+      "name": "GNK Account Sourcing",
+      "role": "Source named target accounts that match GNK ICP guidance and have a timely public trigger event.",
+      "sequence": 7,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-industry-map",
+        "gnk-icp-contact-profile",
+        "gnk-boutique-growth-playbook",
+        "gnk-offer-map",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-account-sourcing",
+      "agentDir": ".openclaw-agents/salesv3-gnk-account-sourcing/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "sourcing_summary",
+        "search_strategy",
+        "target_accounts",
+        "near_misses",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-account-scoring",
+      "slug": "gnk-account-scoring",
+      "name": "GNK Account Scoring",
+      "role": "Rank input accounts against GNK fit signals and disqualifiers, returning scored accounts with reasons and top-N recommendations.",
+      "sequence": 8,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-icp-contact-profile",
+        "gnk-boutique-growth-playbook",
+        "gnk-offer-map",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity",
+        "gnk-account-sourcing"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-account-scoring",
+      "agentDir": ".openclaw-agents/salesv3-gnk-account-scoring/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "inputFiles": [
+        "data/inputs/account-list.json"
+      ],
+      "outputs": [
+        "scoring_summary",
+        "input_status",
+        "scorecard",
+        "ranked_accounts",
+        "top_accounts",
+        "not_recommended",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-contact-discovery",
+      "slug": "gnk-contact-discovery",
+      "name": "GNK Contact Discovery",
+      "role": "Find named working problem owners, evaluators, and credible routers at top accounts, avoiding unreachable executive-only targets.",
+      "sequence": 9,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-account-scoring",
+        "gnk-icp-contact-profile",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-contact-discovery",
+      "agentDir": ".openclaw-agents/salesv3-gnk-contact-discovery/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "discovery_summary",
+        "search_strategy",
+        "account_contact_maps",
+        "contacts_to_prioritize",
+        "contacts_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-lead-persona-profile",
+      "slug": "gnk-lead-persona-profile",
+      "name": "GNK Lead Persona Profile",
+      "role": "Research each discovered lead's individual culture, mindset, communication style, and perspective, and attach that vibe read to the lead and knowledge graph.",
+      "sequence": 9.5,
+      "dependsOn": [
+        "gnk-contact-discovery",
+        "gnk-icp-contact-profile"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-lead-persona-profile",
+      "agentDir": ".openclaw-agents/salesv3-gnk-lead-persona-profile/agent",
+      "execution": "api-key",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "persona_summary",
+        "search_strategy",
+        "person_personas",
+        "cross_persona_patterns",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ]
+    },
+    {
+      "id": "salesv3-gnk-client-dossier",
+      "slug": "gnk-client-dossier",
+      "name": "GNK Client Dossier",
+      "role": "Combine contact discovery and offer maps into detailed account/contact notes for outbound sales.",
+      "sequence": 10,
+      "dependsOn": [
+        "gnk-contact-discovery",
+        "gnk-offer-map",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-client-dossier",
+      "agentDir": ".openclaw-agents/salesv3-gnk-client-dossier/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "dossier_summary",
+        "company_contact_dossiers",
+        "dossiers",
+        "contact_offer_alignment",
+        "outreach_notes",
+        "evidence_gaps",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-outreach-angle",
+      "slug": "gnk-outreach-angle",
+      "name": "GNK Outreach Angle",
+      "role": "Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "sequence": 11,
+      "dependsOn": [
+        "gnk-client-dossier",
+        "gnk-lead-persona-profile",
+        "gnk-contact-discovery",
+        "gnk-account-scoring",
+        "gnk-account-sourcing",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity",
+        "gnk-offer-map",
+        "gnk-icp-contact-profile",
+        "gnk-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-outreach-angle",
+      "agentDir": ".openclaw-agents/salesv3-gnk-outreach-angle/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "angle_summary",
+        "input_status",
+        "company_outreach_maps",
+        "person_dossiers",
+        "angle_patterns",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "thinking": "high",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-sequence-strategy",
+      "slug": "gnk-sequence-strategy",
+      "name": "GNK Sequence Strategy",
+      "role": "Design the 5-7 email outbound sequence strategy so each touch advances the conversation without becoming spam.",
+      "sequence": 12,
+      "dependsOn": [
+        "gnk-outreach-angle",
+        "gnk-client-dossier",
+        "gnk-contact-discovery",
+        "gnk-account-scoring",
+        "gnk-account-sourcing",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity",
+        "gnk-offer-map",
+        "gnk-icp-contact-profile",
+        "gnk-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-sequence-strategy",
+      "agentDir": ".openclaw-agents/salesv3-gnk-sequence-strategy/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "sequence_summary",
+        "strategic_point_of_view",
+        "sequence_architecture",
+        "touch_plan",
+        "persona_variants",
+        "timing_and_exit_rules",
+        "anti_spam_rules",
+        "handoff_to_drafter",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "thinking": "high"
+    },
+    {
+      "id": "salesv3-gnk-email-finder",
+      "slug": "gnk-email-finder",
+      "name": "GNK Email Finder",
+      "role": "Infer each company's email format from public evidence and produce likely email candidates for CRM leads.",
+      "sequence": 13,
+      "dependsOn": [
+        "gnk-outreach-angle",
+        "gnk-contact-discovery",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-email-finder",
+      "agentDir": ".openclaw-agents/salesv3-gnk-email-finder/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "email_summary",
+        "company_email_maps",
+        "results",
+        "source_notes"
+      ],
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-gnk-email-drafter",
+      "slug": "gnk-email-drafter",
+      "name": "GNK Email Drafter",
+      "role": "Draft human-ready first-touch outreach emails from the company outreach maps, preserving grounded trigger context and a low-pressure founder tone.",
+      "sequence": 14,
+      "dependsOn": [
+        "gnk-sequence-strategy",
+        "gnk-email-finder",
+        "gnk-outreach-angle",
+        "gnk-client-dossier",
+        "gnk-contact-discovery",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-email-drafter",
+      "agentDir": ".openclaw-agents/salesv3-gnk-email-drafter/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "draft_summary",
+        "company_email_drafts",
+        "recommended_send_order",
+        "style_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-email-sequence-drafter",
+      "slug": "gnk-email-sequence-drafter",
+      "name": "GNK Email Sequence Drafter",
+      "role": "Draft seven-touch per-person outbound email sequences that use the sequence strategy, account intelligence, revenue policy, and first-touch drafts.",
+      "sequence": 15,
+      "dependsOn": [
+        "gnk-email-drafter",
+        "gnk-sequence-strategy",
+        "gnk-email-finder",
+        "gnk-outreach-angle",
+        "gnk-client-dossier",
+        "gnk-contact-discovery",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-email-sequence-drafter",
+      "agentDir": ".openclaw-agents/salesv3-gnk-email-sequence-drafter/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "sequence_draft_summary",
+        "person_email_sequences",
+        "company_sequence_maps",
+        "recommended_send_order",
+        "global_send_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-email-sequence-reviewer",
+      "slug": "gnk-email-sequence-reviewer",
+      "name": "GNK Email Sequence Reviewer",
+      "role": "Self-criticize and improve the seven-touch outreach sequences using all GNK account intelligence, strategy, revenue policy, and writing rules.",
+      "sequence": 16,
+      "dependsOn": [
+        "gnk-email-sequence-drafter",
+        "gnk-email-drafter",
+        "gnk-sequence-strategy",
+        "gnk-email-finder",
+        "gnk-outreach-angle",
+        "gnk-client-dossier",
+        "gnk-contact-discovery",
+        "gnk-boutique-growth-playbook",
+        "gnk-revenue-strategy",
+        "gnk-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-email-sequence-reviewer",
+      "agentDir": ".openclaw-agents/salesv3-gnk-email-sequence-reviewer/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "review_summary",
+        "quality_rubric",
+        "global_findings",
+        "person_sequence_reviews",
+        "improved_person_email_sequences",
+        "company_review_maps",
+        "recommended_send_order",
+        "reviewer_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-company-context",
+      "slug": "outagehub-company-context",
+      "name": "OutageHub Company Context",
+      "role": "Research the OutageHub site and maintain the shared truth about what OutageHub does.",
+      "sequence": 101,
+      "dependsOn": [],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-company-context",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-company-context/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "company_summary",
+        "service_lanes",
+        "target_pressures",
+        "sales_implications",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-icp-contact-profile",
+      "slug": "outagehub-icp-contact-profile",
+      "name": "OutageHub ICP Contact Profile",
+      "role": "Turn OutageHub company context into ideal customer profiles and contact targeting guidance.",
+      "sequence": 102,
+      "dependsOn": [
+        "outagehub-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-icp-contact-profile",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-icp-contact-profile/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "icp_summary",
+        "priority_segments",
+        "buyer_personas",
+        "contact_titles",
+        "trigger_events",
+        "fit_signals",
+        "disqualifiers",
+        "commercial_floor_signals",
+        "reachability_signals",
+        "outreach_angles",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-boutique-growth-playbook",
+      "slug": "outagehub-boutique-growth-playbook",
+      "name": "OutageHub API Growth Playbook",
+      "role": "Research how successful API, data, and alerting products acquired clients and translate the lessons into OutageHub sales strategy policy.",
+      "sequence": 103,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-boutique-growth-playbook",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-boutique-growth-playbook/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "playbook_summary",
+        "companies_studied",
+        "historical_patterns",
+        "targeting_lessons",
+        "offer_lessons",
+        "credibility_lessons",
+        "sales_motion_lessons",
+        "response_generation_lessons",
+        "strategic_gaps_for_gnk",
+        "agent_policy_updates",
+        "experiments_to_run",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-offer-map",
+      "slug": "outagehub-offer-map",
+      "name": "OutageHub Offer Map",
+      "role": "Turn OutageHub company and ICP context into per-segment pain, outcome, proof, and why-buy-now offer maps.",
+      "sequence": 104,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile",
+        "outagehub-boutique-growth-playbook"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-offer-map",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-offer-map/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "offer_map_summary",
+        "segment_offer_maps",
+        "cross_segment_offer_principles",
+        "urgency_triggers",
+        "proof_assets_to_build",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-market-coverage",
+      "slug": "outagehub-market-coverage",
+      "name": "OutageHub Market Coverage",
+      "role": "Map Canadian industries, account types, coverage gaps, and realistic short/medium/long sales motions for OutageHub.",
+      "sequence": 105,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-market-coverage",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-market-coverage/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "market_coverage_summary",
+        "coverage_sources",
+        "industry_segments",
+        "portfolio_policy",
+        "bucket_overrides",
+        "sourcing_expansion_plan",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-revenue-strategy",
+      "slug": "outagehub-revenue-strategy",
+      "name": "OutageHub Revenue Strategy",
+      "role": "Turn OutageHub commercial targets, commission economics, and company-size constraints into deal-tier sourcing and scoring policy.",
+      "sequence": 106,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-offer-map",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-revenue-strategy",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-revenue-strategy/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "strategy_summary",
+        "revenue_math",
+        "deal_tiers",
+        "company_size_boundaries",
+        "target_industry_logic",
+        "portfolio_strategy",
+        "sourcing_rules",
+        "scoring_rules",
+        "seller_commission_plan",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-pipeline-capacity",
+      "slug": "outagehub-pipeline-capacity",
+      "name": "OutageHub Pipeline Capacity",
+      "role": "Calculate required pipeline inventory, daily outbound volume, and lead-bucket refill targets from OutageHub revenue goals.",
+      "sequence": 107,
+      "dependsOn": [
+        "outagehub-revenue-strategy",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-pipeline-capacity",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-pipeline-capacity/agent",
+      "runner": "local",
+      "model": "local/deterministic",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "capacity_summary",
+        "revenue_goal",
+        "conversion_assumptions",
+        "pipeline_targets",
+        "bucket_targets",
+        "recommended_split",
+        "recommended_prospecting",
+        "operating_rules",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations."
+    },
+    {
+      "id": "salesv3-outagehub-account-sourcing",
+      "slug": "outagehub-account-sourcing",
+      "name": "OutageHub Account Sourcing",
+      "role": "Source named target accounts that match OutageHub ICP guidance and have a timely public trigger event.",
+      "sequence": 108,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-industry-map",
+        "outagehub-icp-contact-profile",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-offer-map",
+        "outagehub-market-coverage",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-account-sourcing",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-account-sourcing/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "sourcing_summary",
+        "search_strategy",
+        "target_accounts",
+        "near_misses",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-account-scoring",
+      "slug": "outagehub-account-scoring",
+      "name": "OutageHub Account Scoring",
+      "role": "Rank input accounts against OutageHub fit signals and disqualifiers, returning scored accounts with reasons and top-N recommendations.",
+      "sequence": 109,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-offer-map",
+        "outagehub-market-coverage",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-account-sourcing"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-account-scoring",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-account-scoring/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "inputFiles": [
+        "data/inputs/account-list.json"
+      ],
+      "outputs": [
+        "scoring_summary",
+        "input_status",
+        "scorecard",
+        "ranked_accounts",
+        "top_accounts",
+        "not_recommended",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-contact-discovery",
+      "slug": "outagehub-contact-discovery",
+      "name": "OutageHub Contact Discovery",
+      "role": "Find named outage-workflow owners, evaluators, and credible routers at top accounts, avoiding unreachable executive-only targets.",
+      "sequence": 110,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-account-scoring",
+        "outagehub-icp-contact-profile",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-contact-discovery",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-contact-discovery/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "discovery_summary",
+        "search_strategy",
+        "account_contact_maps",
+        "contacts_to_prioritize",
+        "contacts_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-lead-persona-profile",
+      "slug": "outagehub-lead-persona-profile",
+      "name": "OutageHub Lead Persona Profile",
+      "role": "Research each discovered lead's individual culture, mindset, communication style, and perspective, and attach that vibe read to the lead and knowledge graph.",
+      "sequence": 110.5,
+      "dependsOn": [
+        "outagehub-contact-discovery",
+        "outagehub-icp-contact-profile"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-lead-persona-profile",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-lead-persona-profile/agent",
+      "execution": "api-key",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers"
+      ],
+      "outputs": [
+        "persona_summary",
+        "search_strategy",
+        "person_personas",
+        "cross_persona_patterns",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations."
+    },
+    {
+      "id": "salesv3-outagehub-client-dossier",
+      "slug": "outagehub-client-dossier",
+      "name": "OutageHub Client Dossier",
+      "role": "Combine contact discovery and offer maps into detailed account/contact notes for outbound sales.",
+      "sequence": 111,
+      "dependsOn": [
+        "outagehub-contact-discovery",
+        "outagehub-offer-map",
+        "outagehub-market-coverage",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-client-dossier",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-client-dossier/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "dossier_summary",
+        "company_contact_dossiers",
+        "dossiers",
+        "contact_offer_alignment",
+        "outreach_notes",
+        "evidence_gaps",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-outreach-angle",
+      "slug": "outagehub-outreach-angle",
+      "name": "OutageHub Outreach Angle",
+      "role": "Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "sequence": 112,
+      "dependsOn": [
+        "outagehub-client-dossier",
+        "outagehub-lead-persona-profile",
+        "outagehub-contact-discovery",
+        "outagehub-account-scoring",
+        "outagehub-account-sourcing",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-offer-map",
+        "outagehub-market-coverage",
+        "outagehub-icp-contact-profile",
+        "outagehub-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-outreach-angle",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-outreach-angle/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "angle_summary",
+        "input_status",
+        "company_outreach_maps",
+        "person_dossiers",
+        "angle_patterns",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "thinking": "high",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-sequence-strategy",
+      "slug": "outagehub-sequence-strategy",
+      "name": "OutageHub Sequence Strategy",
+      "role": "Design the 5-7 email outbound sequence strategy so each touch advances the conversation without becoming spam.",
+      "sequence": 113,
+      "dependsOn": [
+        "outagehub-outreach-angle",
+        "outagehub-client-dossier",
+        "outagehub-contact-discovery",
+        "outagehub-account-scoring",
+        "outagehub-account-sourcing",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-offer-map",
+        "outagehub-market-coverage",
+        "outagehub-icp-contact-profile",
+        "outagehub-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-sequence-strategy",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-sequence-strategy/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "sequence_summary",
+        "strategic_point_of_view",
+        "sequence_architecture",
+        "touch_plan",
+        "persona_variants",
+        "timing_and_exit_rules",
+        "anti_spam_rules",
+        "handoff_to_drafter",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "thinking": "high"
+    },
+    {
+      "id": "salesv3-outagehub-email-finder",
+      "slug": "outagehub-email-finder",
+      "name": "OutageHub Email Finder",
+      "role": "Infer each company's email format from public evidence and produce likely email candidates for CRM leads.",
+      "sequence": 114,
+      "dependsOn": [
+        "outagehub-outreach-angle",
+        "outagehub-contact-discovery",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-email-finder",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-email-finder/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "email_summary",
+        "company_email_maps",
+        "results",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key"
+    },
+    {
+      "id": "salesv3-outagehub-email-drafter",
+      "slug": "outagehub-email-drafter",
+      "name": "OutageHub Email Drafter",
+      "role": "Draft human-ready first-touch outreach emails from the company outreach maps, preserving grounded trigger context and a low-pressure founder tone.",
+      "sequence": 115,
+      "dependsOn": [
+        "outagehub-sequence-strategy",
+        "outagehub-email-finder",
+        "outagehub-outreach-angle",
+        "outagehub-client-dossier",
+        "outagehub-contact-discovery",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-email-drafter",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-email-drafter/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "draft_summary",
+        "company_email_drafts",
+        "recommended_send_order",
+        "style_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-email-sequence-drafter",
+      "slug": "outagehub-email-sequence-drafter",
+      "name": "OutageHub Email Sequence Drafter",
+      "role": "Draft seven-touch per-person outbound email sequences that use the sequence strategy, account intelligence, revenue policy, and first-touch drafts.",
+      "sequence": 116,
+      "dependsOn": [
+        "outagehub-email-drafter",
+        "outagehub-sequence-strategy",
+        "outagehub-email-finder",
+        "outagehub-outreach-angle",
+        "outagehub-client-dossier",
+        "outagehub-contact-discovery",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-email-sequence-drafter",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-email-sequence-drafter/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "sequence_draft_summary",
+        "person_email_sequences",
+        "company_sequence_maps",
+        "recommended_send_order",
+        "global_send_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-email-sequence-reviewer",
+      "slug": "outagehub-email-sequence-reviewer",
+      "name": "OutageHub Email Sequence Reviewer",
+      "role": "Self-criticize and improve the seven-touch outreach sequences using all OutageHub account intelligence, strategy, revenue policy, and writing rules.",
+      "sequence": 117,
+      "dependsOn": [
+        "outagehub-email-sequence-drafter",
+        "outagehub-email-drafter",
+        "outagehub-sequence-strategy",
+        "outagehub-email-finder",
+        "outagehub-outreach-angle",
+        "outagehub-client-dossier",
+        "outagehub-contact-discovery",
+        "outagehub-boutique-growth-playbook",
+        "outagehub-revenue-strategy",
+        "outagehub-pipeline-capacity",
+        "outagehub-market-coverage"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-email-sequence-reviewer",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-email-sequence-reviewer/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "review_summary",
+        "quality_rubric",
+        "global_findings",
+        "person_sequence_reviews",
+        "improved_person_email_sequences",
+        "company_review_maps",
+        "recommended_send_order",
+        "reviewer_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-gnk-industry-map",
+      "slug": "gnk-industry-map",
+      "name": "GNK Industry Map",
+      "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
+      "sequence": 2.5,
+      "dependsOn": [
+        "gnk-company-context",
+        "gnk-icp-contact-profile",
+        "gnk-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-industry-map",
+      "agentDir": ".openclaw-agents/salesv3-gnk-industry-map/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "industry_map_summary",
+        "total_industries",
+        "industries",
+        "coverage_gaps",
+        "recommended_sourcing_order",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    },
+    {
+      "id": "salesv3-outagehub-industry-map",
+      "slug": "outagehub-industry-map",
+      "name": "OutageHub Industry Map",
+      "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
+      "sequence": 102.5,
+      "dependsOn": [
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile",
+        "outagehub-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-industry-map",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-industry-map/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "industry_map_summary",
+        "total_industries",
+        "industries",
+        "excluded_because_data_source",
+        "coverage_gaps",
+        "recommended_sourcing_order",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub sales intelligence pipeline for selling Canadian power-outage API access, notification setup, and custom system integrations.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800
+    }
+  ],
+  "commercialTargets": {
+    "outagehub": {
+      "minimumMonthlyContractValueUsd": 1000,
+      "capacityPlanningMonthlyContractValueUsd": 7500,
+      "minimumEngagementLength": "monthly subscription or custom integration contract",
+      "targetContractShape": "Sell OutageHub as a $1k/month outage API, a $5k/month notification/alerting setup, or a $10k+/month custom integration wired into the customer's operational systems.",
+      "qualificationFocus": [
+        "Canadian power-outage visibility affects customer support, field operations, logistics, risk, insurance, property, infrastructure, or emergency workflows",
+        "the buyer can justify at least $1k/month for reliable API access, $5k/month for notifications, or $10k+/month for system integration",
+        "there is a clear operational owner who needs outage data before customers, tenants, field teams, or internal stakeholders ask",
+        "there is a practical path to an API evaluation, notification pilot, or integration scoping call"
+      ],
+      "disqualifyWhen": [
+        "the account has no Canadian operational exposure or outage-sensitive workflow",
+        "outage data would be a curiosity rather than a decision input",
+        "the buyer path is only generic procurement with no operations, data, platform, support, or risk owner",
+        "the likely need is a one-off public map lookup rather than recurring API, alerting, or integration value"
+      ],
+      "monthlyRevenueFloorUsd": 50000,
+      "sellerCommissionRate": 0.1,
+      "sellerMonthlyIncomeTargetUsd": 10000,
+      "sellerRequiredClosedRevenueForTargetUsd": 100000,
+      "outboundCapacityAssumptions": {
+        "workingDaysPerMonth": 22,
+        "sequenceTouchesPerLead": 6,
+        "positiveReplyRate": 0.06,
+        "positiveReplyToQualifiedConversationRate": 0.55,
+        "qualifiedConversationToClosedDealRate": 0.25,
+        "pipelineInventoryBufferRate": 0.25,
+        "sendReadyBufferRate": 0.15,
+        "expectedNewLeadsPerProspectingRound": 40,
+        "maxRecommendedProspectingRounds": 40,
+        "contractBucketSplit": {
+          "short_term": 0.5,
+          "medium_term": 0.35,
+          "long_term": 0.15
+        }
+      },
+      "dealTiers": [
+        {
+          "tier": "api_access",
+          "monthlyValueUsdRange": [
+            1000,
+            4999
+          ],
+          "role": "fast evaluation and departmental API access",
+          "targetSalesMotion": "operations, data, product, support, risk, insurance, logistics, or infrastructure owner with a recurring need for Canadian outage data",
+          "portfolioUse": "volume base and proof-building motion"
+        },
+        {
+          "tier": "notifications",
+          "monthlyValueUsdRange": [
+            5000,
+            9999
+          ],
+          "role": "managed alerting and notification setup",
+          "targetSalesMotion": "team needs automated notifications for regions, providers, polygons, customers, properties, depots, routes, or operating areas",
+          "portfolioUse": "preferred mid-tier deal for faster MRR growth"
+        },
+        {
+          "tier": "integration",
+          "monthlyValueUsdRange": [
+            10000,
+            50000
+          ],
+          "role": "custom contract to wire outage intelligence into operational systems",
+          "targetSalesMotion": "enterprise or mid-market team needs outage data inside internal dashboards, dispatch, support, risk, claims, property, or incident workflows",
+          "portfolioUse": "highest priority strategic accounts when a real integration owner is reachable"
+        }
+      ],
+      "companySizeGuidance": {
+        "tooSmall": "teams with no recurring Canadian operational footprint or no system that would consume outage data",
+        "targetSmall": "regional operators, SaaS products, property groups, service providers, or infrastructure-adjacent teams that can buy API access or notifications quickly",
+        "targetMedium": "Canadian or Canada-exposed companies with customer operations, field teams, claims, logistics, property, telecom, energy, insurance, or infrastructure workflows",
+        "targetLarge": "large enterprises only when a specific operations, data, platform, support, risk, or incident-management owner and integration use case is visible",
+        "tooLarge": "broad enterprises where the only route is generic vendor intake and no outage-sensitive team or workflow is identifiable"
+      },
+      "portfolioStrategy": [
+        "use $1k/month API deals to create fast adoption and usage proof",
+        "prioritize $5k/month notification opportunities when the account needs automated monitoring or stakeholder alerts",
+        "source $10k+/month custom integration opportunities where outage data would feed internal systems or customer-facing workflows",
+        "keep all pricing and seller economics internal unless the prospect directly asks for pricing"
+      ]
+    }
+  }
+}

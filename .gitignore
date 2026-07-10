@@ -1,0 +1,15 @@
+.openclaw-agents/
+openclaw-workspaces/
+
+# Runtime data can contain prospect details, generated outreach, and local state.
+data/*
+!data/.gitkeep
+!data/inputs/
+data/inputs/*
+!data/inputs/account-list.example.json
+!data/ontology/
+data/ontology/*
+!data/ontology/schema.yaml
+
+node_modules/
+.DS_Store

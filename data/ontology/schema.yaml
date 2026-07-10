@@ -1,0 +1,176 @@
+types:
+  Company:
+    required:
+      - "name"
+  Person:
+    required:
+      - "name"
+  Deal:
+    required:
+      - "name"
+      - "stage"
+    stage_enum:
+      - "new"
+      - "researching"
+      - "to_contact"
+      - "contacted"
+      - "replied"
+      - "won"
+      - "lost"
+  Investor:
+    required:
+      - "name"
+  Introduction:
+    required:
+      - "name"
+  Conversation:
+    required:
+      - "summary"
+  Product:
+    required:
+      - "name"
+  Segment:
+    required:
+      - "name"
+  Persona:
+    required:
+      - "name"
+  Offer:
+    required:
+      - "name"
+  Trigger:
+    required:
+      - "name"
+  Insight:
+    required:
+      - "name"
+  Pain:
+    required:
+      - "name"
+  Proof:
+    required:
+      - "name"
+  Rule:
+    required:
+      - "name"
+  Metric:
+    required:
+      - "name"
+relations:
+  works_at:
+    from_types:
+      - "Person"
+    to_types:
+      - "Company"
+    cardinality: "many_to_one"
+  buyer_at:
+    from_types:
+      - "Person"
+    to_types:
+      - "Company"
+  has_deal:
+    from_types:
+      - "Company"
+    to_types:
+      - "Deal"
+  deal_contact:
+    from_types:
+      - "Deal"
+    to_types:
+      - "Person"
+  invested_in:
+    from_types:
+      - "Investor"
+    to_types:
+      - "Company"
+  introduced_by:
+    from_types:
+      - "Person"
+    to_types:
+      - "Person"
+      - "Introduction"
+  had_conversation:
+    from_types:
+      - "Person"
+      - "Deal"
+    to_types:
+      - "Conversation"
+  competes_with:
+    from_types:
+      - "Company"
+    to_types:
+      - "Company"
+  has_segment:
+    from_types:
+      - "Product"
+    to_types:
+      - "Segment"
+  has_persona:
+    from_types:
+      - "Product"
+      - "Segment"
+    to_types:
+      - "Persona"
+  provides_offer:
+    from_types:
+      - "Product"
+    to_types:
+      - "Offer"
+  serves_segment:
+    from_types:
+      - "Offer"
+    to_types:
+      - "Segment"
+  watches_trigger:
+    from_types:
+      - "Product"
+      - "Segment"
+    to_types:
+      - "Trigger"
+  has_insight:
+    from_types:
+      - "Product"
+    to_types:
+      - "Insight"
+  targets_company:
+    from_types:
+      - "Product"
+    to_types:
+      - "Company"
+  in_segment:
+    from_types:
+      - "Company"
+    to_types:
+      - "Segment"
+  has_pain:
+    from_types:
+      - "Segment"
+      - "Product"
+    to_types:
+      - "Pain"
+  addresses_pain:
+    from_types:
+      - "Offer"
+    to_types:
+      - "Pain"
+  has_proof:
+    from_types:
+      - "Product"
+      - "Offer"
+    to_types:
+      - "Proof"
+  has_rule:
+    from_types:
+      - "Product"
+    to_types:
+      - "Rule"
+  has_metric:
+    from_types:
+      - "Product"
+    to_types:
+      - "Metric"
+  learns_from:
+    from_types:
+      - "Product"
+    to_types:
+      - "Company"

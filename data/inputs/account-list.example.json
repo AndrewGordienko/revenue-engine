@@ -1,0 +1,19 @@
+{
+  "top_n": 10,
+  "accounts": [
+    {
+      "name": "Example Operations Platform",
+      "website": "https://example.com",
+      "industry": "Vertical SaaS",
+      "size": "50-200 employees",
+      "description": "Runs workflow software for operations teams.",
+      "signals": [
+        "custom backend",
+        "manual spreadsheet handoffs",
+        "hiring backend engineers"
+      ],
+      "notes": "Replace this example with real accounts in data/inputs/account-list.json.",
+      "source": "example"
+    }
+  ]
+}
