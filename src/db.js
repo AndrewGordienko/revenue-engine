@@ -180,6 +180,11 @@ function migrate(d) {
   addColumn(d, "leads", "play_id", "TEXT");
   addColumn(d, "leads", "score", "INTEGER");
   addColumn(d, "leads", "score_breakdown", "TEXT");
+  addColumn(d, "contracts", "contract_type", "TEXT");
+  addColumn(d, "contracts", "implementation_cost", "REAL");
+  addColumn(d, "contracts", "status", "TEXT DEFAULT 'active'");
+  addColumn(d, "contracts", "parent_contract_id", "INTEGER");
+  addColumn(d, "contracts", "ended_at", "TEXT");
   const v = d.prepare("SELECT value FROM meta WHERE key='schema_version'").get();
   if (!v) d.prepare("INSERT INTO meta(key,value) VALUES('schema_version','1')").run();
 }

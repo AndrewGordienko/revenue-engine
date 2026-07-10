@@ -17,6 +17,7 @@ import { recordArtifactToOntology } from "./ontology-record.js";
 import { recordArtifactToLeadMemory } from "./lead-memory-record.js";
 import { readMemoryEvents, reduceLeadMemory } from "./lead-memory.js";
 import { fromRoot } from "./paths.js";
+import { PORTFOLIO_STRATEGY, SALES_PLAYS, SEQUENCE_POLICIES, STRATEGY_VERSION } from "./sales-plays.js";
 
 // Agents that do live public web research and benefit from querying several
 // search engines and combining the results (multi-search-engine skill).
@@ -33,7 +34,8 @@ const RESEARCH_AGENT_SUFFIXES = [
   "outreach-angle",
   "email-finder",
   "market-coverage",
-  "lead-persona-profile"
+  "lead-persona-profile",
+  "demand-radar"
 ];
 
 function isResearchAgent(agent) {
@@ -53,10 +55,20 @@ function isDedupAwareAgent(agent) {
 }
 
 function productForAgent(agent) {
+  if ((agent.brands || []).length > 1) return "portfolio";
   return agent.slug.startsWith("outagehub-") ? "outagehub" : "gnk";
 }
 
 function commercialTargetFor(registry, agent) {
+  if ((agent.brands || []).length > 1) {
+    return {
+      portfolio: registry.portfolioStrategy,
+      brands: {
+        gnk: registry.commercialTarget,
+        outagehub: registry.commercialTargets?.outagehub
+      }
+    };
+  }
   return (
     agent.commercialTarget ||
     (agent.commercialTargetKey ? registry.commercialTargets?.[agent.commercialTargetKey] : null) ||
@@ -167,17 +179,22 @@ function findEmailBodyQualityHits(artifact) {
   return hits;
 }
 
-function validateEmailReviewerArtifact(artifact) {
+function expectedSequenceTouches(agent) {
+  return SEQUENCE_POLICIES[productForAgent(agent)]?.touch_count || 0;
+}
+
+function validateEmailReviewerArtifact(agent, artifact) {
   const sequences = artifact.improved_person_email_sequences || [];
   if (!sequences.length) {
     throw new Error("Email reviewer full artifact has no improved_person_email_sequences.");
   }
 
+  const expectedTouches = expectedSequenceTouches(agent);
   const wrongTouchCounts = sequences
-    .filter((sequence) => (sequence.emails || []).length !== 7)
+    .filter((sequence) => (sequence.emails || []).length !== expectedTouches)
     .map((sequence) => `${sequence.company}/${sequence.person_name}`);
   if (wrongTouchCounts.length) {
-    throw new Error(`Email reviewer sequences without exactly seven touches: ${wrongTouchCounts.slice(0, 10).join(", ")}`);
+    throw new Error(`Email reviewer sequences without exactly ${expectedTouches} touches: ${wrongTouchCounts.slice(0, 10).join(", ")}`);
   }
 
   const bodyQualityHits = findEmailBodyQualityHits(artifact);
@@ -186,11 +203,27 @@ function validateEmailReviewerArtifact(artifact) {
   }
 }
 
+function enforceSequencePolicy(agent, artifact) {
+  const sequenceKey = agent.slug.endsWith("email-sequence-reviewer")
+    ? "improved_person_email_sequences"
+    : agent.slug.endsWith("email-sequence-drafter")
+      ? "person_email_sequences"
+      : null;
+  if (!sequenceKey) return artifact;
+  const sequences = artifact[sequenceKey] || [];
+  const expected = expectedSequenceTouches(agent);
+  const wrong = sequences.filter((sequence) => (sequence.emails || []).length !== expected);
+  if (wrong.length) {
+    throw new Error(`${agent.slug} violated the binding ${expected}-touch policy for: ${wrong.slice(0, 10).map((s) => `${s.company}/${s.person_name}`).join(", ")}`);
+  }
+  return artifact;
+}
+
 async function maybeLoadLargeOutputArtifact(agent, artifact, runStartedAt) {
   if (!agent.slug.endsWith("email-sequence-reviewer")) return artifact;
 
   if (artifact.improved_person_email_sequences?.length) {
-    validateEmailReviewerArtifact(artifact);
+    validateEmailReviewerArtifact(agent, artifact);
     return artifact;
   }
 
@@ -201,7 +234,7 @@ async function maybeLoadLargeOutputArtifact(agent, artifact, runStartedAt) {
   }
 
   const fullArtifact = JSON.parse(await fs.readFile(fullArtifactPath, "utf8"));
-  validateEmailReviewerArtifact(fullArtifact);
+  validateEmailReviewerArtifact(agent, fullArtifact);
   return fullArtifact;
 }
 
@@ -424,6 +457,24 @@ function buildMultiSearchBlock(agent) {
   ].join("\n");
 }
 
+function buildCommercialStrategyBlock(agent) {
+  const product = productForAgent(agent);
+  const plays = product === "portfolio" ? SALES_PLAYS : SALES_PLAYS.filter((play) => play.brand === product);
+  const policy = SEQUENCE_POLICIES[product];
+  return [
+    "",
+    `Binding commercial strategy — ${STRATEGY_VERSION}:`,
+    "This block overrides any older pricing, volume, offer, or sequence language elsewhere in the prompt.",
+    "GNK and OutageHub share research/CRM infrastructure only; never transfer economics, offers, proof, sequence, or closing motion between them.",
+    JSON.stringify({ portfolio: PORTFOLIO_STRATEGY, active_brand: product, sales_plays: plays, sequence_policy: policy }, null, 2),
+    product === "gnk"
+      ? "Enforce a one-deal, high-trust motion. Prefer warm introductions, observable triggers, and partners. Do not optimize for hundreds of generic cold emails. Only the three listed sprints may be presented externally; the paid one-week shaping engagement is the fallback."
+      : product === "outagehub"
+        ? "Enforce a paid-pilot motion. Do not lead with a low-price API subscription. Every proposal must separate implementation from recurring fees, name one workflow and success criteria, and create an annual conversion decision."
+        : "Research both brands, but assign every signal and cohort to exactly one brand and one active play. Never create a blended portfolio offer."
+  ].join("\n");
+}
+
 async function buildOntologyBlock(agent) {
   let summary;
   try {
@@ -556,11 +607,13 @@ async function buildPrompt(registry, agent) {
 
   const exclusionBlock = await buildExclusionBlock(agent);
   const multiSearchBlock = buildMultiSearchBlock(agent);
+  const commercialStrategyBlock = buildCommercialStrategyBlock(agent);
   const ontologyBlock = await buildOntologyBlock(agent);
   const leadMemoryBlock = await buildLeadMemoryBlock(agent);
 
   return [
     instructions,
+    commercialStrategyBlock,
     multiSearchBlock,
     ontologyBlock,
     leadMemoryBlock,
@@ -795,7 +848,7 @@ async function main() {
 
     const artifact = enforceSourcingReachability(
       agent,
-      annotateAgentArtifact(
+      enforceSequencePolicy(agent, annotateAgentArtifact(
         agent,
         await maybeLoadLargeOutputArtifact(
           agent,
@@ -803,7 +856,7 @@ async function main() {
           runStartedAt
         ),
         modelUsed
-      )
+      ))
     );
     const published = await publishArtifact(agent, artifact);
     await publishDownstreamHandoffs(registry, agent, published);

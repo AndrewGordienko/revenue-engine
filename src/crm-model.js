@@ -4,6 +4,7 @@
 // - Send-eligibility is strict: deliverability + jurisdiction + enumerated legal
 //   basis WITH required evidence + suppression + sender infra + no duplicate contact.
 import { tx } from "./db.js";
+import { classifyReply } from "./reply-classifier.js";
 
 const now = () => new Date().toISOString();
 
@@ -183,13 +184,17 @@ export function recordEvent(d, leadId, type, { occurred_at, source = "dashboard"
     if (!el.ok) throw new Error(`cannot record automated 'sent': send-blocked [${el.blocked.join(", ")}]`);
   }
 
+  const normalizedPayload = type === "reply" && payload.body && !payload.classification
+    ? { ...payload, classification: classifyReply(payload.body) }
+    : payload;
+
   return tx((db) => {
     db.prepare(
       `INSERT INTO activity_events(lead_id,type,occurred_at,recorded_at,cohort_id,pipeline_run_id,source,payload,dedupe_key)
        VALUES(?,?,?,?,?,?,?,?,?)`
-    ).run(leadId, type, occurred_at || now(), now(), lead.cohort_id, lead.pipeline_run_id, source, JSON.stringify(payload), dedupe_key);
+    ).run(leadId, type, occurred_at || now(), now(), lead.cohort_id, lead.pipeline_run_id, source, JSON.stringify(normalizedPayload), dedupe_key);
 
-    applySideEffects(db, lead, type, rule, payload);
+    applySideEffects(db, lead, type, rule, normalizedPayload);
     rematerialize(db, leadId);
     return getLead(db, leadId);
   });

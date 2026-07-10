@@ -21,7 +21,7 @@ Also read the account list when present:
 - The developer product is an authenticated API for Canadian outage data. Public app routes include developer getting-started, API keys, playground, profile, and notifications pages.
 - The API surface shown in the playground includes `GET https://api.outagehub.ca/v1/outages` with time-window parameters such as `since` and `until`, optional provider filtering, and an `X-API-Key` header.
 - Outage records can include provider, latitude, longitude, polygon, customer count, cause, outage type, planned/unplanned flag, local/TZ/UTC start and end fields, estimated restoration fields, and update timestamps.
-- Commercial motion: $1,000/month for API access, $5,000/month for notification setup/managed alerting, and $10,000+/month for custom contracts that wire OutageHub into the customer's systems.
+- Commercial motion: paid 30-day pilots with separate implementation fees: operational $7.5k-$15k + $2.5k-$5k/month, embedded $15k-$30k + $7.5k-$15k/month, or portfolio $5k-$15k + $1.5k-$5k/month.
 - Strong buyer contexts include utilities-adjacent software, emergency management, municipalities, telecom/network operations, insurance/claims, property management, logistics, field service, infrastructure monitoring, customer support, and operational risk teams with Canadian exposure.
 - Do not claim official utility partnership, complete national coverage, guaranteed accuracy, regulatory status, customer logos, or implementation details unless a source or upstream artifact explicitly supports it.
 
@@ -33,10 +33,10 @@ Also read the account list when present:
 - Use upstream `fit_signals`, `disqualifiers`, `priority_segments`, `buyer_personas`, and `segment_offer_maps`.
 - Use `outagehub-boutique-growth-playbook` to reward accounts matching historically successful API/data-product entry patterns: urgent wedge, reachable outage-workflow owner, technical/data evaluator, credible founder-led POV, referral/partner route, proofable pain, and expansion path.
 - Give each account a numerical score from `0` to `100`.
-- Treat the project commercial target as a qualification gate: accounts should plausibly support at least a $1k one-month contract.
+- Treat the project commercial target as a qualification gate: accounts should plausibly fund a paid implementation and 30-day pilot, then convert to an annual recurring contract.
 - Use `outagehub-revenue-strategy` to score deal tier, sales-cycle speed, procurement risk, and whether the account belongs in the near-term send list, medium expansion pipeline, or large nurture pipeline.
 - Use `outagehub-pipeline-capacity` to score whether an account helps refill the current bucket gaps, especially the short-term send-ready gap.
-- Favor accounts that can contribute to the $50k/month OutageHub revenue floor and the seller's internal $100k/month closed-revenue target without making seller economics prospect-facing.
+- Favor accounts that can fund one of three to four paid pilots now and plausibly expand into a high-value annual recurring agreement.
 - Score problem-owner reachability explicitly. A technically strong account should not rank high if there is no credible route to the person who owns the outage-sensitive workflow: network/service operations, NOC, field operations, customer operations, claims operations, facilities/property operations, dispatch, emergency management, business continuity, data/API/product, or integrations.
 - Cap `reachable_path_score` at 2 when the path is only a CEO, broad C-suite executive, generic contact form, procurement portal, vendor intake, or company inbox. Score 4-5 only when the path identifies a reachable manager/director/lead/evaluator/router close to the actual outage-data workflow.
 - Prefer strong evidence over vague category matching.

@@ -1,23 +1,21 @@
 # GNK + OutageHub — Business Plan 2026 (versioned strategy)
 
-`strategy_version: plan-2026-07-10` · horizon 36 months · status: founder planning document, assumptions require validation.
+`strategy_version: plan-2026-07-11` · horizon 36 months · status: active commercial-control document, assumptions require validation.
 
 This is the **versioned strategy tier** (Business Plan 2026, §35: "Strategy is versioned. Operational records are transactional. Agents assist; deterministic code controls state."). The machine-readable plays live in [`src/sales-plays.js`](../src/sales-plays.js) and are seeded into the `sales_plays` table. Bump `STRATEGY_VERSION` and add a revision rather than editing a play in place.
 
 ## Portfolio thesis
-Two economic engines. **GNK** = near-term cash: a four-person senior engineering studio owning difficult product/backend/data/modernization/AI work; first offer $40k–$60k sprint. **OutageHub** = scalable recurring revenue: a Canadian outage API evolving into a location-level infrastructure-intelligence platform; first offer $2k–$15k pilot + recurring subscription. Shared: engineering, market intelligence, **the sales platform**. Not shared: positioning, pricing logic, forecasts, or a single undifferentiated sequence.
+Two economic engines. **GNK** = near-term cash: one high-trust $40k–$60k sprint in 30 days. **OutageHub** = scalable recurring revenue: three to four paid implementations/pilots worth $40k in booked first-month revenue, then annual conversion and a 60–120 day path to $40k MRR. Shared: engineering, Demand Radar research, evidence controls, CRM, cohorts, reply learning, and reporting. Not shared: positioning, pricing, offers, proof, funnel economics, sequence, or close.
 
 ## Sales plays (§36) — every prospect attaches to exactly one
 | play_id | brand | target | first offer | price |
 |---|---|---|---|---|
-| GNK-PROD-01 | gnk | delayed/difficult product slice | Senior Engineering Delivery Sprint | $40–60k |
 | GNK-BE-01 | gnk | backend/platform reliability/scale | Backend Risk & Stabilization Sprint | $35–50k |
-| GNK-DATA-01 | gnk | manual multi-system workflow | Data & Automation Sprint | $40–60k |
-| GNK-MOD-01 | gnk | legacy / troubled build / rescue | Modernization or Rescue Sprint | $35–50k |
+| GNK-DATA-01 | gnk | manual multi-system workflow | Data & Operations Automation Sprint | $40–60k |
 | GNK-AI-01 | gnk | valuable AI workflow → production | Production AI Workflow Sprint | $40–60k |
-| OHUB-ISP-01 | outagehub | regional ISP/telecom NOC | Power-context operations pilot | $2–5k/mo + impl |
-| OHUB-FAC-01 | outagehub | multi-location facilities | Portfolio monitoring pilot | $0.5–1.5k/mo + impl |
-| OHUB-EMBED-01 | outagehub | software/data platform | Embedded evaluation | $5–15k/mo |
+| OHUB-ISP-01 | outagehub | regional ISP/telecom NOC | Paid operational pilot | $7.5–15k impl + $2.5–5k/mo |
+| OHUB-FAC-01 | outagehub | multi-location facilities | Paid portfolio pilot | $5–15k impl + $1.5–5k/mo |
+| OHUB-EMBED-01 | outagehub | software/data platform | Paid embedded evaluation | $15–30k impl + $7.5–15k/mo |
 
 Play schema (§37): `play_id`, `strategy_version`, `target_account_definition`, `hard_disqualifiers`, `buyer_roles`, `trigger_types`, `problem_hypothesis`, `first_offer`, `price`, `proof_required`, `discovery_questions`, `success_metrics`, `expansion_path`.
 
@@ -51,4 +49,4 @@ Play/ICP fit 25 · Problem evidence 20 · Trigger/timing 15 · Owner reachabilit
 Take a GNK project only if workflow/owner/access/economics/acceptance/pod-capacity are clear. Build an OutageHub feature only if repeated across customers, core, or fully funded and ≥70% reusable. Scale outbound only after route quality, delivery, complaint, reply, and capacity metrics are healthy. Continue a play after a full cohort only with evidence of conversations/learning. Hire against contracted backlog, not top-of-funnel optimism.
 
 ## What is wired now vs staged
-Wired: versioned plays + attachment gate; separated Prospect/Opportunity/Contract lifecycles; hard-gate ladder; within-play scoring; the canonical SQLite store, immutable event log, compliance/deliverability gates, cohort lineage (Track 1). Staged (needs live data / larger build): GNK delivery + OutageHub usage lifecycles, ProductUsage/DeliveryCapacity ingestion, measurement dashboards, MRR-bridge + capacity-aware forecasting (§43), sending/reply-capture infra (Track 2).
+Wired: six versioned brand-specific plays; binding prompt and sequence controls; shared Demand Radar; separated Prospect/Opportunity/Contract lifecycles; hard gates; reply/objection classification; canonical SQLite and immutable events; cohort lineage; and outcome reporting by product, cohort, and play. Staged (needs live data / larger build): GNK delivery + OutageHub usage lifecycles, ProductUsage/DeliveryCapacity ingestion, MRR-bridge + capacity-aware forecasting (§43), and mailbox sending/reply capture (Track 2).

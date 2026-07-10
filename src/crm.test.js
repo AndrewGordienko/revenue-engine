@@ -18,7 +18,10 @@ const { sendEligibility, routeReady, researchReady, recordEvent, setStage, getLe
 const { assertLineage, assertSameCohort } = await import("./crm-model.js");
 const { openOpportunity, setOppStage, recordContractSigned, getOpp } = await import("./opportunities.js");
 const { scoreLead } = await import("./scoring.js");
-const { PLAYS_BY_ID } = await import("./sales-plays.js");
+const { PLAYS_BY_ID, PLAYS_BY_BRAND, SEQUENCE_POLICIES, STRATEGY_VERSION } = await import("./sales-plays.js");
+const { classifyReply } = await import("./reply-classifier.js");
+const { buildPipelineReport } = await import("./pipeline-report.js");
+const { calculatePipelineCapacity } = await import("./pipeline-capacity.js");
 
 const nowIso = () => new Date().toISOString();
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
@@ -164,6 +167,56 @@ test("opportunity: 'lost' requires a loss_reason", () => {
   const opp = openOpportunity(d, l.id, {});
   assert.throws(() => setOppStage(d, opp.id, "lost"), /loss_reason/);
   assert.equal(setOppStage(d, opp.id, "lost", { loss_reason: "no budget" }).stage, "lost");
+});
+
+test("commercial strategy keeps three offers per brand and different sequence economics", () => {
+  assert.equal(STRATEGY_VERSION, "plan-2026-07-11");
+  assert.equal(PLAYS_BY_BRAND.gnk.length, 3);
+  assert.equal(PLAYS_BY_BRAND.outagehub.length, 3);
+  assert.equal(SEQUENCE_POLICIES.gnk.touch_count, 4);
+  assert.equal(SEQUENCE_POLICIES.outagehub.touch_count, 5);
+  assert.equal(PLAYS_BY_ID["OHUB-EMBED-01"].price.implementation.min, 15000);
+  assert.equal(PLAYS_BY_ID["GNK-AI-01"].engagement_shape.fallback_offer.credited_to_sprint, true);
+});
+
+test("capacity uses explicit one-deal and paid-pilot campaign targets", () => {
+  const registry = JSON.parse(fs.readFileSync(path.join(process.cwd(), "agents", "registry.json"), "utf8"));
+  const gnk = calculatePipelineCapacity({ registry, state: {}, leads: [], agent: { slug: "gnk-pipeline-capacity" } });
+  const oh = calculatePipelineCapacity({ registry, state: {}, leads: [], agent: { slug: "outagehub-pipeline-capacity", commercialTargetKey: "outagehub" } });
+  assert.equal(gnk.campaign_targets.researchedAccounts, 250);
+  assert.equal(gnk.pipeline_targets.total_leads_required, 500);
+  assert.equal(gnk.revenue_goal.required_closed_deals, 1);
+  assert.equal(oh.campaign_targets.researchedAccounts, 150);
+  assert.equal(oh.pipeline_targets.total_leads_required, 300);
+  assert.equal(oh.revenue_goal.required_closed_deals, 3);
+});
+
+test("reply classifier captures positive intent and objections", () => {
+  assert.equal(classifyReply("Yes, send details and let's schedule time").intent, "positive");
+  const budget = classifyReply("This is interesting but we do not have budget until next quarter");
+  assert.ok(budget.objections.includes("budget"));
+  assert.ok(budget.objections.includes("timing"));
+});
+
+test("cohort report tracks funnel, booked revenue, and implementation margin", () => {
+  const d = db();
+  d.prepare("INSERT OR IGNORE INTO cohorts(cohort_id,product,strategy_version,created_at) VALUES('report-c','gnk',?,?)").run(STRATEGY_VERSION, nowIso());
+  const lead = seedLead({ cohort_id: "report-c", strategy_version: STRATEGY_VERSION, stage: "route_ready" });
+  recordEvent(d, lead.id, "sent", { source: "test" });
+  recordEvent(d, lead.id, "reply", { source: "test", payload: { body: "Yes, let's meet next week" } });
+  recordEvent(d, lead.id, "meeting", { source: "test" });
+  const opp = openOpportunity(d, lead.id, {});
+  setOppStage(d, opp.id, "qualified", { qualification: { problem: "p", consequence: "c", owner: "o", timing: "t", decision_path: "d", next_step: "n" } });
+  setOppStage(d, opp.id, "solution_defined", { solution: { solution: "s", success_metrics: "m", price: "40k", responsibilities: "r" } });
+  setOppStage(d, opp.id, "proposal", { next_step_at: nowIso() });
+  recordContractSigned(d, opp.id, { one_time: 40000, start_date: "2026-08-01", implementation_cost: 10000, contract_type: "sprint" });
+  const row = buildPipelineReport(d).cohorts.find((candidate) => candidate.cohort_id === "report-c");
+  assert.equal(row.positive_replies, 1);
+  assert.equal(row.meetings_held, 1);
+  assert.equal(row.proposals, 1);
+  assert.equal(row.wins, 1);
+  assert.equal(row.booked_one_time_usd, 40000);
+  assert.equal(row.implementation_gross_margin, 0.75);
 });
 
 // ---- within-play scoring (§42) ---------------------------------------------

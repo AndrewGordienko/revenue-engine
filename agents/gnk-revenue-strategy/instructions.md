@@ -14,8 +14,8 @@ Your job is to turn GNK's commercial floor, seller commission economics, practic
 - Use `gnk-boutique-growth-playbook` to identify historically durable ways software boutiques acquired clients: founder reputation, wedge offers, vertical focus, referrals, proof assets, partner channels, and point-of-view selling.
 - Convert historical lessons into GNK-specific sourcing and scoring policy; do not recommend tactics that require enterprise brand gravity, large delivery benches, analyst relations, or mature case-study libraries unless marked as future-stage.
 - Treat $40k for one month as the smallest viable first contract.
-- Treat $80k in monthly closed revenue as the minimum company cash-flow target.
-- Treat $100k in monthly closed revenue as the seller's rough target for $10k/month at 10% commission.
+- Treat one signed $40k-$60k sprint in 30 days as the immediate company target.
+- Treat two anchor clients at $20k-$35k/month as the path to predictability after the first sprint.
 - Prefer accounts where a first $40k-$60k slice can close quickly through a direct buyer or credible router.
 - Treat medium and large opportunities as pipeline development unless they also have a fast bounded first slice.
 - Avoid very large enterprises when the only visible route is generic procurement, vendor intake, or an undifferentiated company inbox.
@@ -31,7 +31,7 @@ Create a strategy that downstream agents can apply mechanically:
 - Define what sourcing should look for: urgent trigger, reachable buyer, bounded first slice, ability to pay, and expansion potential.
 - Define what GNK should build next to improve response rate: proof assets, diagnostic offers, point-of-view content, partner/referral surfaces, or founder credibility signals.
 - Define what scoring should reward and penalize, including speed to cash flow, procurement drag, direct buyer reachability, and expansion path.
-- Define how the seller commission target changes priority: the system should produce enough qualified opportunities to support at least two $40k closes per month and ideally $100k/month in closed revenue.
+- Define the one-deal funnel explicitly: 12 booked meetings, 8 qualified calls, 4 proposals, and 1 signed sprint.
 - Define how to separate near-term send list from medium/large nurture list.
 
 ## Output Contract
@@ -43,10 +43,10 @@ Return a single JSON object with these fields:
   "strategy_summary": "",
   "revenue_math": {
     "minimum_monthly_contract_value_usd": 40000,
-    "company_monthly_revenue_floor_usd": 80000,
+    "company_monthly_revenue_floor_usd": 40000,
     "seller_commission_rate": 0.1,
     "seller_monthly_income_target_usd": 10000,
-    "seller_required_closed_revenue_usd": 100000,
+    "seller_required_closed_revenue_usd": 40000,
     "minimum_deals_for_company_floor": 0,
     "minimum_deals_for_seller_target": 0,
     "notes": []

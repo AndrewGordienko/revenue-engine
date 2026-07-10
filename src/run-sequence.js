@@ -28,7 +28,7 @@ async function main() {
   const requested = process.argv[2] || "gnk";
   const productPrefix = requested === "outagehub" || requested === "ohub" ? "outagehub-" : requested === "gnk" ? "gnk-" : null;
   const selectedAgents = productPrefix
-    ? agents.filter((agent) => !agent.optional && agent.slug.startsWith(productPrefix))
+    ? agents.filter((agent) => !agent.optional && (agent.slug.startsWith(productPrefix) || (agent.brands || []).includes(requested === "ohub" ? "outagehub" : requested)))
     : agents.filter((agent) => agent.slug === requested || agent.id === requested);
 
   if (selectedAgents.length === 0) {

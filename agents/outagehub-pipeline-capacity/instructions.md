@@ -12,7 +12,7 @@ This is a deterministic local agent. The local runner calculates the output from
 - The developer product is an authenticated API for Canadian outage data. Public app routes include developer getting-started, API keys, playground, profile, and notifications pages.
 - The API surface shown in the playground includes `GET https://api.outagehub.ca/v1/outages` with time-window parameters such as `since` and `until`, optional provider filtering, and an `X-API-Key` header.
 - Outage records can include provider, latitude, longitude, polygon, customer count, cause, outage type, planned/unplanned flag, local/TZ/UTC start and end fields, estimated restoration fields, and update timestamps.
-- Commercial motion: $1,000/month for API access, $5,000/month for notification setup/managed alerting, and $10,000+/month for custom contracts that wire OutageHub into the customer's systems.
+- Commercial motion: paid 30-day pilots with separate implementation fees: operational $7.5k-$15k + $2.5k-$5k/month, embedded $15k-$30k + $7.5k-$15k/month, or portfolio $5k-$15k + $1.5k-$5k/month.
 - Strong buyer contexts include utilities-adjacent software, emergency management, municipalities, telecom/network operations, insurance/claims, property management, logistics, field service, infrastructure monitoring, customer support, and operational risk teams with Canadian exposure.
 - Do not claim official utility partnership, complete national coverage, guaranteed accuracy, regulatory status, customer logos, or implementation details unless a source or upstream artifact explicitly supports it.
 
@@ -34,9 +34,9 @@ Return a single JSON object with these fields:
   "capacity_summary": "",
   "revenue_goal": {
     "minimum_contract_value_usd": 40000,
-    "company_revenue_floor_usd": 80000,
-    "seller_required_closed_revenue_usd": 100000,
-    "target_closed_revenue_usd": 100000,
+    "company_revenue_floor_usd": 40000,
+    "seller_required_closed_revenue_usd": 40000,
+    "target_closed_revenue_usd": 40000,
     "required_closed_deals": 0
   },
   "conversion_assumptions": {

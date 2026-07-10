@@ -9,7 +9,7 @@ const PRODUCTS = {
     name: "GNK",
     mark: "GNK",
     colorName: "blue",
-    description: "senior engineering services"
+    description: "high-trust engineering sprints"
   },
   outagehub: {
     key: "outagehub",
@@ -18,7 +18,7 @@ const PRODUCTS = {
     name: "OutageHub",
     mark: "OH",
     colorName: "orange",
-    description: "Canadian outage API"
+    description: "Canadian power-event intelligence"
   }
 };
 
@@ -445,9 +445,9 @@ function defaultBody(lead) {
         ? `Saw that ${trig.charAt(0).toLowerCase()}${trig.slice(1)}. That looked like the kind of context where Canadian outage data can matter before customers or field teams start asking.`
         : `I was looking at ${lead.company || "your team"} and thought Canadian outage data might be useful for an operations, support, risk, or field workflow.`,
       "",
-      angle || "OutageHub provides API access to Canadian power-outage data, with options for notifications and custom integrations when teams need it inside their own systems.",
+      angle || "OutageHub is a Canadian power-event intelligence layer that can show which locations are affected, how fresh and confident the event is, what changed, and which operator should respond.",
       "",
-      "Would it be worth a short conversation to see whether API access, notifications, or a deeper integration would be useful?",
+      "Would it be useful to test one outage-sensitive decision in a paid 30-day pilot?",
       "",
       "Best,",
       `${SENDER_NAME}`
@@ -461,9 +461,9 @@ function defaultBody(lead) {
       ? `Saw that ${trig.charAt(0).toLowerCase()}${trig.slice(1)} — that's usually where senior engineering pays for itself fast.`
       : `I've been following ${lead.company || "your team"} and think there's a clean way we could help.`,
     "",
-    angle || `We're a small founder-led engineering studio (GNK) that takes on the risky, business-critical slice — backend, platform, rescue — without a big-agency process.`,
+    angle || `GNK is a senior engineering strike team that takes a business-critical AI workflow, backend risk, or operations system from stuck to working production software in four to six weeks.`,
     "",
-    `No pitch — happy to share a short read on where I'd start. Open to 15 minutes this week?`,
+    `If this sits with you, would a short note on the first production outcome and acceptance criteria be useful?`,
     "",
     `Best,`,
     `${SENDER_NAME}`
@@ -531,7 +531,9 @@ function renderOverview() {
   const revenue = productArtifact("revenue-strategy");
   const capacity = productArtifact("pipeline-capacity");
   const targets = capacity?.pipeline_targets || {};
-  const math = revenue?.revenue_math || state.registry.commercialTargets?.[product.slug] || state.registry.commercialTarget || {};
+  const configured = state.registry.commercialTargets?.[product.slug] || state.registry.commercialTarget || {};
+  const math = revenue?.revenue_math || configured;
+  const campaign = capacity?.campaign_targets || configured.campaignTargets || {};
   const portfolio = revenue?.portfolio_strategy || {};
   const el = h("section", { class: "page" });
 
@@ -551,19 +553,19 @@ function renderOverview() {
     h("div", { class: "revenue-strip" }, [
       h("div", { class: "revenue-copy" }, [
         h("p", { class: "card-eyebrow", text: "Commercial strategy" }),
-        h("h2", { class: "revenue-title", text: product.key === "outagehub" ? "Outage-sensitive operations first; industry second." : "Contract-shaped pain first; industry second." }),
+        h("h2", { class: "revenue-title", text: product.key === "outagehub" ? "Paid operational pilots, then annual contracts." : "One high-trust sprint, not a volume funnel." }),
         h("p", {
           class: "revenue-sub",
           text: revenue?.strategy_summary || (product.key === "outagehub"
-            ? "Prioritize reachable buyers with Canadian outage-sensitive workflows that can use API access, notifications, or integrations."
-            : "Prioritize reachable buyers with urgent software work that can support a bounded first month.")
+            ? "Prove one outage-sensitive decision with paid implementation and a 30-day evaluation, then convert it to an annual agreement."
+            : "Use warm introductions, observable triggers, and partners to close one four-to-six-week production sprint.")
         })
       ]),
       h("div", { class: "revenue-metrics" }, [
-        metric("Smallest first month", money(math.minimum_monthly_contract_value_usd || math.minimumMonthlyContractValueUsd || 40000)),
-        metric(`${product.short} floor`, `${money(math.company_monthly_revenue_floor_usd || math.monthlyRevenueFloorUsd || 80000)}/mo`),
-        metric("Seller target", `${money(math.seller_monthly_income_target_usd || math.sellerMonthlyIncomeTargetUsd || 10000)}/mo`),
-        metric("Closed revenue target", `${money(math.seller_required_closed_revenue_usd || math.sellerRequiredClosedRevenueForTargetUsd || 100000)}/mo`)
+        metric("30-day booked target", money(campaign.bookedRevenueUsd || math.target_closed_revenue_usd || 40000)),
+        metric("Meetings", numberOrDash(campaign.bookedMeetings)),
+        metric("Proposals", numberOrDash(campaign.proposals)),
+        metric(product.key === "outagehub" ? "Paid pilots" : "Signed sprint", numberOrDash(campaign.paidWins))
       ]),
       portfolio.near_term_send_list ? h("p", { class: "revenue-note", text: portfolio.near_term_send_list }) : null
     ])
@@ -572,24 +574,24 @@ function renderOverview() {
   el.append(
     h("div", { class: "capacity-strip" }, [
       h("div", { class: "capacity-copy" }, [
-        h("p", { class: "card-eyebrow", text: "Pipeline capacity" }),
-        h("h2", { class: "revenue-title", text: capacity ? "Outbound volume is target-led now." : "Run capacity planning before prospecting." }),
+        h("p", { class: "card-eyebrow", text: "30-day campaign" }),
+        h("h2", { class: "revenue-title", text: capacity ? "Outcomes control the campaign." : "Run campaign planning before prospecting." }),
         h("p", {
           class: "revenue-sub",
-          text: capacity?.capacity_summary || "The capacity agent calculates required lead inventory, send-ready leads, and daily email volume from the revenue goal."
+          text: capacity?.capacity_summary || "The pipeline controller calculates named accounts, buyers, meetings, proposals, and wins from the brand-specific motion."
         })
       ]),
       h("div", { class: "capacity-metrics" }, [
-        metric("Lead inventory target", numberOrDash(targets.total_leads_required)),
-        metric("Current gap", numberOrDash(targets.total_lead_gap)),
-        metric("New first touches/day", numberOrDash(targets.daily_first_touch_emails_required)),
-        metric("Total sequence emails/day", numberOrDash(targets.daily_total_sequence_emails_required)),
-        metric("Send-ready target", numberOrDash(targets.send_ready_leads_required)),
-        metric("Send-ready gap", numberOrDash(targets.send_ready_gap))
+        metric("Researched accounts", numberOrDash(campaign.researchedAccounts)),
+        metric("Named contacts", numberOrDash(campaign.named_contacts || targets.total_leads_required)),
+        metric("Booked meetings", numberOrDash(campaign.bookedMeetings)),
+        metric("Qualified calls", numberOrDash(campaign.qualifiedConversations)),
+        metric("Proposals", numberOrDash(campaign.proposals)),
+        metric("Paid wins", numberOrDash(campaign.paidWins))
       ]),
       h("div", { class: "capacity-actions" }, [
         h("button", { class: "btn", text: "Refresh capacity", onclick: () => postAction(`/api/run/${productSlug("pipeline-capacity")}`) }),
-        h("button", { class: "btn primary", text: "Fill to target", onclick: () => postAction("/api/prospect") })
+        h("button", { class: "btn primary", text: "Build named-account cohort", onclick: () => postAction("/api/prospect") })
       ])
     ])
   );

@@ -62,6 +62,7 @@ function bucketTarget(total, split, bucket) {
 
 export function calculatePipelineCapacity({ registry, state, leads, agent = null }) {
   const commercialTarget = commercialTargetFor(registry, agent);
+  const campaign = commercialTarget.campaignTargets || null;
   const assumptions = {
     ...DEFAULT_ASSUMPTIONS,
     ...(commercialTarget.outboundCapacityAssumptions || {}),
@@ -87,16 +88,16 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
     commercialTarget,
     "monthlyRevenueFloorUsd",
     "company_monthly_revenue_floor_usd",
-    80000
+    40000
   );
   const sellerRequiredClosedRevenueUsd = commercialValue(
     commercialTarget,
     "sellerRequiredClosedRevenueForTargetUsd",
     "seller_required_closed_revenue_usd",
-    100000
+    40000
   );
-  const targetClosedRevenueUsd = Math.max(companyRevenueFloorUsd, sellerRequiredClosedRevenueUsd);
-  const requiredClosedDeals = ceil(targetClosedRevenueUsd / planningContractValueUsd);
+  const targetClosedRevenueUsd = campaign?.bookedRevenueUsd || Math.max(companyRevenueFloorUsd, sellerRequiredClosedRevenueUsd);
+  const requiredClosedDeals = campaign?.paidWins || ceil(targetClosedRevenueUsd / planningContractValueUsd);
   const emailToClosedDealRate =
     num(assumptions.positiveReplyRate, DEFAULT_ASSUMPTIONS.positiveReplyRate) *
     num(
@@ -108,12 +109,19 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
       DEFAULT_ASSUMPTIONS.qualifiedConversationToClosedDealRate
     );
 
-  const monthlyFirstTouchesRequired = ceil(requiredClosedDeals / emailToClosedDealRate);
+  // Campaign targets take precedence over reverse-engineering a pure cold-email
+  // funnel. GNK combines warm, triggered, and partner routes; OutageHub works a
+  // finite design-partner account list. A "first touch" is one named contact.
+  const researchedAccountsRequired = campaign?.researchedAccounts || null;
+  const contactsPerAccount = campaign?.contactsPerAccount || 1;
+  const monthlyFirstTouchesRequired = researchedAccountsRequired
+    ? ceil(researchedAccountsRequired * contactsPerAccount)
+    : ceil(requiredClosedDeals / emailToClosedDealRate);
   const dailyFirstTouchesRequired = ceil(monthlyFirstTouchesRequired / assumptions.workingDaysPerMonth);
   const monthlySequenceEmailsRequired = monthlyFirstTouchesRequired * assumptions.sequenceTouchesPerLead;
   const dailyTotalEmailsRequired = ceil(monthlySequenceEmailsRequired / assumptions.workingDaysPerMonth);
-  const sendReadyLeadsRequired = ceil(monthlyFirstTouchesRequired * (1 + assumptions.sendReadyBufferRate));
-  const totalLeadsRequired = ceil(monthlyFirstTouchesRequired * (1 + assumptions.pipelineInventoryBufferRate));
+  const sendReadyLeadsRequired = campaign ? monthlyFirstTouchesRequired : ceil(monthlyFirstTouchesRequired * (1 + assumptions.sendReadyBufferRate));
+  const totalLeadsRequired = campaign ? monthlyFirstTouchesRequired : ceil(monthlyFirstTouchesRequired * (1 + assumptions.pipelineInventoryBufferRate));
 
   const currentTotal = leads.length;
   const currentWithEmail = leads.filter((lead) => lead.email_best).length;
@@ -140,9 +148,9 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
   );
 
   return {
-    capacity_summary:
-      `Maintain about ${totalLeadsRequired} total leads, ${sendReadyLeadsRequired} send-ready leads, ` +
-      `${dailyFirstTouchesRequired} new first-touch emails per working day, and about ${dailyTotalEmailsRequired} total sequence emails per working day.`,
+    capacity_summary: campaign
+      ? `${productForAgent(agent) === "gnk" ? "One-deal" : "Paid-pilot"} campaign: research ${researchedAccountsRequired} accounts, map ${monthlyFirstTouchesRequired} named contacts, create ${campaign.bookedMeetings} meetings, ${campaign.qualifiedConversations} qualified conversations, ${campaign.proposals} proposals, and ${requiredClosedDeals} paid win${requiredClosedDeals === 1 ? "" : "s"} worth ${targetClosedRevenueUsd.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}.`
+      : `Maintain about ${totalLeadsRequired} total leads, ${sendReadyLeadsRequired} send-ready leads, ${dailyFirstTouchesRequired} new first-touch emails per working day, and about ${dailyTotalEmailsRequired} total sequence emails per working day.`,
     revenue_goal: {
       minimum_contract_value_usd: minimumContractValueUsd,
       capacity_planning_monthly_contract_value_usd: planningContractValueUsd,
@@ -151,6 +159,13 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
       target_closed_revenue_usd: targetClosedRevenueUsd,
       required_closed_deals: requiredClosedDeals
     },
+    campaign_targets: campaign ? {
+      ...campaign,
+      named_contacts: monthlyFirstTouchesRequired,
+      meetings_to_proposal_rate: campaign.proposals / campaign.bookedMeetings,
+      qualified_to_proposal_rate: campaign.proposals / campaign.qualifiedConversations,
+      proposal_to_win_rate: campaign.paidWins / campaign.proposals,
+    } : null,
     conversion_assumptions: {
       working_days_per_month: assumptions.workingDaysPerMonth,
       sequence_touches_per_lead: assumptions.sequenceTouchesPerLead,
@@ -159,7 +174,9 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
       qualified_conversation_to_closed_deal_rate: assumptions.qualifiedConversationToClosedDealRate,
       email_to_closed_deal_rate: emailToClosedDealRate,
       notes: [
-        `Email-to-close is modeled as ${pct(assumptions.positiveReplyRate)} positive replies x ${pct(assumptions.positiveReplyToQualifiedConversationRate)} qualified conversations x ${pct(assumptions.qualifiedConversationToClosedDealRate)} closes.`,
+        campaign
+          ? "The active campaign uses explicit account, meeting, proposal, and win targets; email conversion is diagnostic, not the primary capacity driver."
+          : `Email-to-close is modeled as ${pct(assumptions.positiveReplyRate)} positive replies x ${pct(assumptions.positiveReplyToQualifiedConversationRate)} qualified conversations x ${pct(assumptions.qualifiedConversationToClosedDealRate)} closes.`,
         "Tune these assumptions in agents/registry.json commercialTarget.outboundCapacityAssumptions when real reply and close data exists."
       ]
     },
@@ -192,19 +209,23 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
       }
     },
     recommended_prospecting: {
+      motion: campaign ? (productForAgent(agent) === "gnk" ? "one-deal high-trust campaign" : "paid design-partner pilot campaign") : "outbound inventory",
       target_total_leads: totalLeadsRequired,
       target_send_ready_leads: sendReadyLeadsRequired,
       current_total_leads: currentTotal,
       lead_gap: leadGap,
       expected_new_leads_per_round: assumptions.expectedNewLeadsPerProspectingRound,
       rounds_to_run: recommendedRounds,
-      instruction:
-        "Prospecting should fill to target_total_leads, then email finding and sequence drafting should raise current_send_ready_leads to target_send_ready_leads."
+      instruction: campaign
+        ? "Fill the finite named-account campaign, verify an owner and router, then move only evidence-backed accounts toward meetings and proposals."
+        : "Prospecting should fill to target_total_leads, then email finding and sequence drafting should raise current_send_ready_leads to target_send_ready_leads."
     },
     operating_rules: [
-      "Do not stop at 100 leads; use pipeline_targets.total_leads_required as the standing inventory target.",
+      campaign
+        ? "Do not inflate activity beyond the named-account campaign; improve trigger, buyer, proof, and proposal quality first."
+        : "Use pipeline_targets.total_leads_required as the standing inventory target.",
       `Keep about ${pct(assumptions.contractBucketSplit.short_term)} of the working list in short_term contract-bucket leads until reply data says otherwise.`,
-      "Treat daily_first_touch_emails_required as the number of new people to start each working day.",
+      "Treat daily_first_touch_emails_required as a pacing indicator across approved channels, not an email quota.",
       "Treat daily_total_sequence_emails_required as the total daily workload once follow-ups are running.",
       "If send_ready_gap is positive, prioritize email finding and sequence drafting before adding low-confidence long_term leads."
     ],

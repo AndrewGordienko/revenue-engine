@@ -24,9 +24,9 @@ Return a single JSON object with these fields:
   "capacity_summary": "",
   "revenue_goal": {
     "minimum_contract_value_usd": 40000,
-    "company_revenue_floor_usd": 80000,
-    "seller_required_closed_revenue_usd": 100000,
-    "target_closed_revenue_usd": 100000,
+    "company_revenue_floor_usd": 40000,
+    "seller_required_closed_revenue_usd": 40000,
+    "target_closed_revenue_usd": 40000,
     "required_closed_deals": 0
   },
   "conversion_assumptions": {

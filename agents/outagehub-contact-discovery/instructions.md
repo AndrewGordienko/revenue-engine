@@ -19,7 +19,7 @@ Return **actual named operational owners, never a C-suite fallback.** Last cycle
 - The developer product is an authenticated API for Canadian outage data. Public app routes include developer getting-started, API keys, playground, profile, and notifications pages.
 - The API surface shown in the playground includes `GET https://api.outagehub.ca/v1/outages` with time-window parameters such as `since` and `until`, optional provider filtering, and an `X-API-Key` header.
 - Outage records can include provider, latitude, longitude, polygon, customer count, cause, outage type, planned/unplanned flag, local/TZ/UTC start and end fields, estimated restoration fields, and update timestamps.
-- Commercial motion: $1,000/month for API access, $5,000/month for notification setup/managed alerting, and $10,000+/month for custom contracts that wire OutageHub into the customer's systems.
+- Commercial motion: paid 30-day pilots with separate implementation fees: operational $7.5k-$15k + $2.5k-$5k/month, embedded $15k-$30k + $7.5k-$15k/month, or portfolio $5k-$15k + $1.5k-$5k/month.
 - Strong buyer contexts include utilities-adjacent software, emergency management, municipalities, telecom/network operations, insurance/claims, property management, logistics, field service, infrastructure monitoring, customer support, and operational risk teams with Canadian exposure.
 - Do not claim official utility partnership, complete national coverage, guaranteed accuracy, regulatory status, customer logos, or implementation details unless a source or upstream artifact explicitly supports it.
 
@@ -62,7 +62,7 @@ Start from each top account and its fit or trigger context:
 - Match upstream `contact_titles`, `buyer_personas`, and account-level `recommended_contacts` or `recommended_contact_titles` to public people at that account.
 - Find people connected to the triggering outage-sensitive workflow, platform, product, operations process, customer support process, dispatch process, claims process, property/facilities process, network/service operations function, incident workflow, or data/API integration path.
 - Prioritize people who can feel the problem, own the workflow, evaluate OutageHub technically, or route the conversation.
-- Prioritize people who can plausibly sponsor, evaluate, or route a $1k one-month engagement.
+- Prioritize people who can sponsor, evaluate, or route a paid implementation and 30-day pilot with an annual conversion decision.
 - Prioritize the path most likely to create closed revenue quickly, while keeping seller commission logic internal.
 - Prefer contacts with an actual route in: official email, public company contact path, event/speaker page, published team page, authored operational/product/data content, role-specific routing path, partner/introduction route, or credible internal router.
 - Return practical contact information for email prep: public profile URL, official/public email if available, public company contact route, routing notes, and the source URLs that justify the route.

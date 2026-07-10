@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import { promisify } from "node:util";
 import { appendMessage, readRegistry, readState, writeState } from "./bus.js";
 import { fromRoot } from "./paths.js";
+import { SEQUENCE_POLICIES } from "./sales-plays.js";
 
 const execFileAsync = promisify(execFile);
 const REVIEWER_SLUG = "gnk-email-sequence-reviewer";
@@ -65,7 +66,7 @@ function validateSequences(sequences) {
   const hits = [];
   for (const sequence of sequences) {
     const emails = sequence.emails || [];
-    if (emails.length !== 7) {
+    if (emails.length !== SEQUENCE_POLICIES.gnk.touch_count) {
       hits.push({ company: sequence.company, person_name: sequence.person_name, pattern: "wrong_touch_count" });
     }
     for (const email of emails) {
@@ -95,7 +96,7 @@ function buildPrompt(chunk, label, totalLabel) {
     "",
     "Hard rules:",
     "- Return only valid JSON.",
-    "- Preserve exactly seven emails per person.",
+    `- Preserve exactly ${SEQUENCE_POLICIES.gnk.touch_count} emails per person on Days 1, 4, 10, and 18.`,
     "- Do not add links or URLs to bodies or signatures.",
     "- Use this exact signature in every body: Andrew Gordienko / Co-founder / G&K Software.",
     "- Do not use: \"I'm Andrew, one of the founders at G&K Software.\"",
@@ -278,7 +279,7 @@ async function main() {
 
   const artifact = {
     ...(baseArtifact || {}),
-    review_summary: `Chunked GPT-5.5 high review regenerated seven-touch sequences for ${reviewedSequences.length} unique CRM leads.`,
+    review_summary: `Chunked GPT-5.5 high review regenerated four-touch sequences for ${reviewedSequences.length} unique CRM leads.`,
     global_findings: [
       {
         finding: "The reviewer now prioritizes human founder copy over compressed internal strategy language.",

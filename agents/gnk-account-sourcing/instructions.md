@@ -31,7 +31,7 @@ Two hard requirements govern every target account, so that leads are real reacha
 - Source by contract-shaped pain, buyer reachability, and deal velocity first. Industry is a supporting signal, not the primary filter.
 - Use `gnk-boutique-growth-playbook` to prefer account types, trigger types, route-in patterns, and wedge opportunities that historically helped software boutiques win early clients.
 - Prefer accounts where the outreach can credibly lead with diagnosis, point of view, founder expertise, or a bounded first slice rather than a generic "we build software" pitch.
-- Prioritize accounts that can help GNK reach at least $80k/month in company revenue and roughly $100k/month in closed revenue for the seller's $10k commission target, but keep this economics layer internal.
+- Prioritize accounts that can become the one $40k-$60k signed sprint required in the next 30 days; rank trust path and observable urgency above raw list volume.
 - When the capacity plan shows short-term bucket gaps, bias returned accounts toward direct economic or technical buyers with current triggers and low procurement drag. Do not pad long-term nurture accounts just to increase volume.
 - Treat buyer reachability as a required sourcing dimension: identify a concrete public path to the likely problem owner or credible router, not just a company name.
 - Do not use "CEO", "founder", or broad C-suite as the default `likely_buyer_or_router` for large or mature companies. Prefer the exact manager/director/lead who owns the triggering team, workflow, platform, product, operations process, data flow, or modernization slice. Use C-suite only for small/founder-led accounts or when public evidence ties that executive to the exact problem.

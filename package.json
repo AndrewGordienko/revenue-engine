@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "setup": "node src/setup-openclaw.js",
+    "research:radar": "node src/run-agent.js revenue-demand-radar",
     "research:gnk": "node src/run-agent.js gnk-company-context",
     "research:icp": "node src/run-agent.js gnk-icp-contact-profile",
     "research:growth": "node src/run-agent.js gnk-boutique-growth-playbook",
@@ -46,6 +47,8 @@
     "apply:email-patterns": "node src/apply-email-patterns.js",
     "publish:probable-email-patterns": "node src/publish-probable-email-patterns.js",
     "audit:contacts": "node src/audit-contact-targets.js",
+    "classify:reply": "node src/reply-classifier.js",
+    "report:pipeline": "node src/pipeline-report.js",
     "dedupe:leads": "node src/dedupe-leads.js",
     "pipeline:gnk": "node src/run-sequence.js",
     "pipeline:ohub": "node src/run-sequence.js outagehub",

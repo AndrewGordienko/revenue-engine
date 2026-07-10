@@ -26,7 +26,7 @@ Also read the account list when present:
 - Treat the project commercial target as a qualification gate: accounts should plausibly support at least a $40k one-month contract.
 - Use `gnk-revenue-strategy` to score deal tier, sales-cycle speed, procurement risk, and whether the account belongs in the near-term send list, medium expansion pipeline, or large nurture pipeline.
 - Use `gnk-pipeline-capacity` to score whether an account helps refill the current bucket gaps, especially the short-term send-ready gap.
-- Favor accounts that can contribute to the $80k/month GNK revenue floor and the seller's internal $100k/month closed-revenue target without making seller economics prospect-facing.
+- Favor accounts that could credibly become the one $40k-$60k signed sprint in the next 30 days, especially through a warm or partner route.
 - Score problem-owner reachability explicitly. A technically strong account should not rank high if there is no credible route to the person who owns the triggering workflow, team, platform, product, data flow, or operational process.
 - Cap `reachable_path_score` at 2 when the path is only a CEO, broad C-suite executive, generic contact form, procurement portal, vendor intake, or company inbox. Score 4-5 only when the path identifies a reachable manager/director/lead/evaluator/router close to the actual problem.
 - Prefer strong evidence over vague category matching.
