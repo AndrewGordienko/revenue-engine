@@ -1,0 +1,32 @@
+{
+  "_comment": "Operator-approved, evidence-backed play assignments and changes. The play-consistency gate (src/play-consistency.js) FAILS CLOSED on any manifest<->CRM play conflict unless a matching approved decision here authorizes it. A decision is not a way to make numbers agree — it records the evidence that justifies the play, with the buyer and disqualifier reasoning. from_play may be null for a first assignment.",
+  "decisions": [
+    {
+      "company": "Zero Networks",
+      "domain": "zeronetworks.com",
+      "product": "gnk",
+      "from_play": "GNK-DATA-01",
+      "to_play": "GNK-BE-01",
+      "decided_by": "operator",
+      "decided_at": "2026-07-11",
+      "evidence_urls": [
+        "https://zeronetworks.com/blog/ai-segmentation-is-here",
+        "https://zeronetworks.com"
+      ],
+      "rationale": "Resolved from evidence, not to force manifest/CRM agreement. Public trigger: 'AI Segmentation Is Here' (2026-04-21) — a microsegmentation / zero-trust security vendor scaling with public growth and customer proof. Intended buyer is Chris Boehm, Field CTO (sourcing router: Benny Lakunishok, Co-Founder/CEO) — CTO-level infrastructure owners. The sourcing hypothesis already frames the fit as GNK's 'rescue and hardening lanes'. GNK-DATA-01 REJECTED: it targets an operations-heavy company with an internal spreadsheet/manual-handoff workflow and a Director of Business Systems/Operations buyer; there is no evidence of an internal ops-automation pain and the buyer is a Field CTO — wrong target and wrong buyer. GNK-AI-01 CONSIDERED but REJECTED: its target is a client whose AI workflow is not yet production-safe, but Zero Networks' AI Segmentation is a GA commercial product and core IP with no pre-production gap for GNK to close, and a security vendor will not outsource the core of its own security-AI product (trips the 'prototype/demo only' disqualifier, inverted). GNK-BE-01 CHOSEN: business-critical security infrastructure at scale, buyer alignment (CTO/VP-Eng/Platform Lead), and a bounded backend-hardening outcome that does not require handing over product IP. This coincides with the existing CRM play, but the decision stands on the evidence above."
+    },
+    {
+      "company": "Zero Networks",
+      "domain": "zeronetworks.com",
+      "product": "gnk",
+      "from_play": "GNK-AI-01",
+      "to_play": "GNK-BE-01",
+      "decided_by": "operator",
+      "decided_at": "2026-07-11",
+      "evidence_urls": [
+        "https://zeronetworks.com/blog/ai-segmentation-is-here"
+      ],
+      "rationale": "The legacy CRM import also sourced Zero Networks under GNK-AI-01 (a duplicate lead). That assignment is superseded by the GNK-BE-01 decision above: Zero Networks' AI Segmentation is a shipped GA product and core IP, so there is no pre-production AI workflow for GNK to productionize (GNK-AI-01's target). The bounded, defensible engagement is backend risk/stabilization on their scaling zero-trust enforcement infrastructure (GNK-BE-01), consistent with the Field-CTO buyer. Recorded so the fail-closed play-consistency gate reconciles the AI-01 duplicate rather than silently ignoring it. NOTE: the underlying duplicate Zero Networks leads are a legacy-import data-quality issue slated for first-class account dedup in PR#7."
+    }
+  ]
+}
