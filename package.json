@@ -59,8 +59,13 @@
     "mailbox:sync": "node src/ops-cli.js mailbox:sync",
     "reply:handle": "node src/ops-cli.js reply:handle",
     "meeting:prepare": "node src/ops-cli.js meeting:prepare",
+    "pipeline": "node src/run-pipeline.js",
     "pipeline:gnk": "node src/run-pipeline.js full gnk",
     "pipeline:ohub": "node src/run-pipeline.js full outagehub",
+    "smoke:seed": "node src/smoke-cli.js seed",
+    "smoke:fixture": "node src/smoke-cli.js fixture",
+    "smoke:report": "node src/smoke-cli.js report",
+    "smoke:assert": "node src/smoke-cli.js assert",
     "validate:agents": "node src/validate-agents.js",
     "regenerate:leads": "node src/regenerate-leads.js",
     "ontology": "node src/ontology-cli.js",
@@ -77,7 +82,7 @@
     "draft-only:test": "node --test src/draft-only.test.js",
     "acceptance": "node src/run-acceptance.js",
     "benchmark:build": "node benchmark/build-fixtures.mjs",
-    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js"
+    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
