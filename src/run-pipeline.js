@@ -4,7 +4,9 @@
 //      node src/run-pipeline.js cohort:build outagehub
 //      node src/run-pipeline.js lead:prepare gnk --dry-run
 import { spawn } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { readRegistry, readState } from "./bus.js";
+import { db as dbForLedger } from "./db.js";
 import { fromRoot } from "./paths.js";
 import { PIPELINES, planPipeline, normalizeProduct } from "./pipelines.js";
 import { isLiveSmokeMode, requireCohortForLiveSmoke } from "./smoke-live.js";
@@ -85,10 +87,17 @@ async function main() {
   console.log(`[pipeline] ${toRun.length}/${plan.length} agents will run${dryRun ? " (dry run — nothing executed)" : ""}\n`);
   if (dryRun) return;
 
+  // Per-agent wall-clock is recorded so cost/runtime can be attributed per account
+  // (runtime_ms / accounts in the scoped cohort). Token cost is not yet surfaced by
+  // the model gateway; runtime is the honest proxy until it is.
+  const timings = [];
   for (const step of toRun) {
     console.log(`\n[pipeline] → ${step.slug}${cohort ? ` (scope ${cohort})` : ""}`);
+    const startedAt = Date.now();
     await runAgent(step.slug, cohort);
+    timings.push({ slug: step.slug, tier: step.tier, ms: Date.now() - startedAt });
   }
+  writeRuntimeLedger({ pipeline: pipelineName, product, cohort, timings });
 
   // Close the loop: sourced accounts -> CRM leads, reviewed sequences -> approval
   // queue. --no-ingest leaves the artifacts published but does not touch the CRM.
@@ -98,6 +107,35 @@ async function main() {
       console.log(`\n[pipeline] closing the loop (ingest=${touches.ingest}, promote=${touches.promote})`);
       await runPostPipeline(pipelineName, product);
     }
+  }
+}
+
+// Attribute runtime per account: total agent wall-clock over the number of leads
+// in the scoped cohort. Written to data/artifacts so the operator can see the real
+// cost shape of a run instead of guessing.
+function writeRuntimeLedger({ pipeline, product, cohort, timings }) {
+  if (!timings.length) return;
+  const totalMs = timings.reduce((n, t) => n + t.ms, 0);
+  let accounts = 0;
+  try {
+    const rows = cohort
+      ? dbForLedger().prepare("SELECT COUNT(DISTINCT company_domain) n FROM leads WHERE cohort_id LIKE ?").get(`${cohort}%`)
+      : dbForLedger().prepare("SELECT COUNT(DISTINCT company_domain) n FROM leads WHERE product=?").get(product);
+    accounts = rows?.n || 0;
+  } catch { /* ledger is best-effort */ }
+  const ledger = {
+    pipeline, product, cohort: cohort || null, recorded_at: new Date().toISOString(),
+    total_runtime_ms: totalMs, agents: timings,
+    accounts, runtime_ms_per_account: accounts ? Math.round(totalMs / accounts) : null,
+    note: "token/model cost pending gateway usage reporting; runtime_ms is the current proxy.",
+  };
+  const dir = fromRoot("data", "artifacts");
+  const file = `${dir}/pipeline-runtime-${product}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+  try {
+    writeFileSync(file, JSON.stringify(ledger, null, 2) + "\n");
+    console.log(`[runtime] ${Math.round(totalMs / 1000)}s across ${timings.length} agents · ${accounts} accounts · ${ledger.runtime_ms_per_account ?? "?"}ms/account → ${file.split("/").slice(-1)[0]}`);
+  } catch (error) {
+    console.warn(`[runtime] could not write ledger: ${error.message}`);
   }
 }
 
