@@ -11,6 +11,7 @@ import { readState } from "./bus.js";
 import { getLead, sendEligibility } from "./crm-model.js";
 import { getCohort } from "./lineage.js";
 import { loadManifest, cohortIdFor } from "./smoke-live.js";
+import { checkPlayConsistency } from "./play-consistency.js";
 import { normalizeProduct } from "./lineage.js";
 
 const norm = (v) => String(v || "").toLowerCase().trim();
@@ -30,11 +31,18 @@ function artifactMentions(state, product, company) {
 
 export async function buildLiveLoopReport(database = db(), manifest = loadManifest(), injectedState = null) {
   const state = injectedState || (await readState());
+  // Authoritative play reconciliation (the fail-closed gate), keyed by domain, so
+  // the report shows ok/resolved/conflict rather than a raw legacy-duplicate play.
+  const playStatus = new Map(checkPlayConsistency(database, manifest).accounts.map((a) => [a.domain, a.status]));
   const rows = manifest.map((account) => {
     const product = normalizeProduct(account.product);
     const cohortId = cohortIdFor({ ...account, product });
     const cohort = getCohort(database, cohortId);
-    const leadRow = database.prepare("SELECT id FROM leads WHERE company_domain=? AND product=?").get(account.domain, product);
+    // Prefer the lead in THIS account's live-smoke cohort so a legacy-import
+    // duplicate under a different play doesn't misreport the account's play.
+    const leadRow = database.prepare("SELECT id FROM leads WHERE company_domain=? AND product=? AND cohort_id=?").get(account.domain, product, cohortId)
+      || database.prepare("SELECT id FROM leads WHERE company_domain=? AND product=? AND play_id=? ORDER BY created_at").get(account.domain, product, account.play_id)
+      || database.prepare("SELECT id FROM leads WHERE company_domain=? AND product=? ORDER BY created_at").get(account.domain, product);
     const lead = leadRow ? getLead(database, leadRow.id) : null;
     const messages = lead
       ? database.prepare("SELECT status, review_status FROM outreach_messages WHERE lead_id=? AND message_type='sequence_touch'").all(lead.id)
@@ -45,6 +53,7 @@ export async function buildLiveLoopReport(database = db(), manifest = loadManife
       company: account.company, play: account.play_id, product,
       lead_present: Boolean(lead),
       play_assigned: lead?.play_id || null,
+      play_status: playStatus.get(account.domain) || "unknown",
       crm_stage: lead?.crm_stage || lead?.stage || null,
       cohort_status: cohort?.status || "missing",
       dossier_artifact: artifacts.dossier,
@@ -84,11 +93,11 @@ export async function buildLiveLoopReport(database = db(), manifest = loadManife
 function printReport(report) {
   console.log(`\nLive-loop status — ${report.verdict.loop_closed_accounts}/${report.verdict.of} accounts closed, draft-only ${report.verdict.draft_only_intact ? "intact" : "VIOLATED"}\n`);
   const col = (v, n) => String(v ?? "").padEnd(n);
-  console.log(col("COMPANY", 16) + col("PLAY", 13) + col("LEAD", 6) + col("PLAY?", 12) + col("DOSSIER", 9) + col("SEQ", 5) + col("QUEUED", 8) + col("APPR", 6) + col("SENT", 6));
+  console.log(col("COMPANY", 16) + col("PLAY", 13) + col("RECON", 10) + col("LEAD", 6) + col("DOSSIER", 9) + col("SEQ", 5) + col("QUEUED", 8) + col("APPR", 6) + col("SENT", 6));
   for (const r of report.accounts) {
     console.log(
-      col(r.company, 16) + col(r.play, 13) + col(r.lead_present ? "yes" : "—", 6) +
-      col(r.play_assigned || "—", 12) + col(r.dossier_artifact ? "yes" : "—", 9) +
+      col(r.company, 16) + col(r.play, 13) + col(r.play_status, 10) + col(r.lead_present ? "yes" : "—", 6) +
+      col(r.dossier_artifact ? "yes" : "—", 9) +
       col(r.reviewed_sequence_artifact ? "yes" : "—", 5) + col(r.queued, 8) +
       col(r.approved, 6) + col(r.sent, 6)
     );

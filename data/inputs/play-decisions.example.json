@@ -2,6 +2,33 @@
   "_comment": "Operator-approved, evidence-backed play assignments and changes. The play-consistency gate (src/play-consistency.js) FAILS CLOSED on any manifest<->CRM play conflict unless a matching approved decision here authorizes it. A decision is not a way to make numbers agree — it records the evidence that justifies the play, with the buyer and disqualifier reasoning. from_play may be null for a first assignment.",
   "decisions": [
     {
+      "company": "Zonos",
+      "domain": "zonos.com",
+      "product": "gnk",
+      "from_play": "GNK-BE-01",
+      "to_play": "GNK-DATA-01",
+      "decided_by": "operator",
+      "decided_at": "2026-07-11",
+      "evidence_urls": [
+        "https://www.prweb.com/releases/zonos-acquires-evolve-trade-services-to-build-customs-brokerage-directly-into-its-cross-border-operating-system-302758951.html",
+        "https://zonos.com/brokerage"
+      ],
+      "rationale": "Nominated as the genuine GNK-DATA-01 account for the six-account smoke's DATA-01 slot (replacing Zero Networks, which resolved to BE-01 and is already covered by SecureSafe). Verified public trigger: Zonos acquired Evolve Trade Services (a licensed US customs brokerage) on 2026-04-30 and is integrating it into its cross-border operating system ahead of new US postal entry-filing rules that make structured customs entry filing a requirement. This is a DATA-01 fit: an operations-heavy company with an expensive workflow crossing brittle business systems (customs clearance, entry filing, duty/tax and HS-code data reconciliation) under a systems-integration + regulatory-change trigger, with an operations buyer (Head of Supply Chain). GNK-BE-01 REJECTED for the smoke slot: the bounded opportunity is data/process automation of entry filing and customs-data flows, not backend reliability of a critical service path. GNK-AI-01 REJECTED: no pre-production AI workflow is the driver; the work is trade-data/business-systems integration. The legacy CRM import carries Zonos under both GNK-AI-01 (Chief Data Scientist contact) and GNK-BE-01 (Head of Supply Chain contact); both are reconciled to GNK-DATA-01 here so the fail-closed gate passes. Underlying duplicate leads are a legacy-import data-quality issue for PR#7 account dedup."
+    },
+    {
+      "company": "Zonos",
+      "domain": "zonos.com",
+      "product": "gnk",
+      "from_play": "GNK-AI-01",
+      "to_play": "GNK-DATA-01",
+      "decided_by": "operator",
+      "decided_at": "2026-07-11",
+      "evidence_urls": [
+        "https://www.prweb.com/releases/zonos-acquires-evolve-trade-services-to-build-customs-brokerage-directly-into-its-cross-border-operating-system-302758951.html"
+      ],
+      "rationale": "Companion decision to the GNK-BE-01 -> GNK-DATA-01 change above: the legacy import also sourced Zonos under GNK-AI-01 (a Chief Data Scientist contact and an AI-workflow-reliability angle). That framing is superseded — the Evolve Trade Services acquisition makes the bounded, defensible engagement customs entry-filing and trade-data integration (GNK-DATA-01), not productionizing a pre-production AI workflow (GNK-AI-01's target). Recorded so the fail-closed gate reconciles the AI-01 duplicate rather than ignoring it."
+    },
+    {
       "company": "Zero Networks",
       "domain": "zeronetworks.com",
       "product": "gnk",
