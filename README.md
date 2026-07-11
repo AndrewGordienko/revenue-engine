@@ -74,9 +74,15 @@ New cohorts begin in `draft`. A founder must approve one exact sales play and th
 
 The Approvals dashboard shows cohort rules, message approvals, provider drafts, and Google integration status. The Overview shows actual versus target for verified contacts, sends, replies, meetings, qualified opportunities, proposals, wins, revenue, MRR, and implementation margin.
 
-### Draft-only mode (default)
+### Sending is not implemented (draft-only by construction)
 
-Outbound sending is **off by default and off today**. `OUTBOUND_SENDING_ENABLED` defaults to `0`; a single guard (`src/outbound-guard.js`) blocks every provider send path — `GmailProvider.sendDraft`, `sendApprovedDraft`, and the `/api/outreach-queue/:id/send` route (403). Cohorts are forced to `auto_send: false`, and creating a Gmail draft never marks a lead contacted (a `sent` event is only recorded from a real Gmail sent message). Enabling sending is a separate, deliberate milestone — and even then, prefer sending manually from Gmail.
+Outbound sending is **intentionally not part of this build** — not merely disabled by a flag. There is deliberately no configuration switch that turns it on, so accidental sending is impossible through configuration alone:
+
+- `GmailProvider.sendDraft()` and `sendApprovedDraft()` throw unconditionally (`src/outbound-guard.js`), before any network call.
+- There is no `/send` API action; the outreach route accepts only `approve | reject | draft`.
+- Cohorts are forced to `auto_send: false`, and creating a Gmail draft never marks a lead contacted (a `sent` event is only recorded from a real Gmail sent message observed via sync).
+
+The engine researches, verifies contacts, writes and reviews sequences, queues for approval, and can create Gmail **drafts** — you send from Gmail yourself. Sending will be reintroduced only in a dedicated, explicitly reviewed change.
 
 ## Agent operating model
 
