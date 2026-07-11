@@ -81,7 +81,13 @@ const state = {
   activeTouchNumber: 1,
   leadMemory: { leadId: null, data: null, loading: false },
   memorySummary: {},
-  memoryLogOpen: false
+  memoryLogOpen: false,
+  pipelineReport: { products: [], cohorts: [] },
+  outreachQueue: [],
+  cohorts: [],
+  integrations: {},
+  meetingProposals: {},
+  callBriefs: {}
 };
 
 const stageEl = document.querySelector("#stage");
@@ -248,13 +254,17 @@ async function copyText(text, message = "Copied") {
 /* ---------- data ---------- */
 async function load() {
   applyProductChrome();
-  const [registry, bus, messages, runStatus, leads, memorySummary] = await Promise.all([
+  const [registry, bus, messages, runStatus, leads, memorySummary, pipelineReport, outreachQueue, cohorts, integrations] = await Promise.all([
     fetch("/api/agents").then((r) => r.json()),
     fetch("/api/state").then((r) => r.json()),
     fetch("/api/messages?limit=60").then((r) => r.json()),
     fetch("/api/run-status").then((r) => r.json()),
     fetch(productUrl("/api/leads")).then((r) => r.json()).catch(() => ({ leads: [], stats: {}, task: null })),
-    fetch(productUrl("/api/lead-memory")).then((r) => r.json()).then((j) => j.summary || {}).catch(() => ({}))
+    fetch(productUrl("/api/lead-memory")).then((r) => r.json()).then((j) => j.summary || {}).catch(() => ({})),
+    fetch("/api/pipeline-report").then((r) => r.json()).catch(() => ({ products: [], cohorts: [] })),
+    fetch(productUrl("/api/outreach-queue")).then((r) => r.json()).then((j) => j.messages || []).catch(() => []),
+    fetch(productUrl("/api/cohorts")).then((r) => r.json()).then((j) => j.cohorts || []).catch(() => []),
+    fetch("/api/integrations").then((r) => r.json()).catch(() => ({}))
   ]);
   state.registry = registry;
   state.bus = bus;
@@ -262,6 +272,10 @@ async function load() {
   state.runStatus = runStatus;
   state.leads = leads;
   state.memorySummary = memorySummary;
+  state.pipelineReport = pipelineReport;
+  state.outreachQueue = outreachQueue;
+  state.cohorts = cohorts;
+  state.integrations = integrations;
   render();
 }
 
@@ -324,6 +338,13 @@ async function postAction(path) {
   await load();
 }
 
+async function apiPost(path, body = {}) {
+  const response = await fetch(productUrl(path), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) throw new Error(result.error || `Request failed (${response.status})`);
+  return result;
+}
+
 // ---- lead memory (per-lead timeline + understanding) ----
 async function loadLeadMemory(id) {
   if (!id) return;
@@ -336,11 +357,13 @@ async function loadLeadMemory(id) {
 }
 
 async function postMemory(id, type, payload) {
-  await fetch(productUrl(`/api/lead-memory/${encodeURIComponent(id)}`), {
+  const response = await fetch(productUrl(`/api/lead-memory/${encodeURIComponent(id)}`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ type, payload })
   });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) { toast(result.error || "Could not record event"); return; }
   await loadLeadMemory(id);
   await load();
 }
@@ -501,16 +524,6 @@ async function resetDraft(lead) {
   await patchLead(lead.id, { email_subject: "", email_body: "" });
 }
 
-function gmailUrl(to, subject, body) {
-  const u = new URL("https://mail.google.com/mail/");
-  u.searchParams.set("view", "cm");
-  u.searchParams.set("fs", "1");
-  if (to) u.searchParams.set("to", to);
-  u.searchParams.set("su", subject);
-  u.searchParams.set("body", body);
-  return u.toString();
-}
-
 /* ---------- page: header ---------- */
 function pageHead(eyebrow, title, sub, actions) {
   return h("header", { class: "page-head" }, [
@@ -534,6 +547,9 @@ function renderOverview() {
   const configured = state.registry.commercialTargets?.[product.slug] || state.registry.commercialTarget || {};
   const math = revenue?.revenue_math || configured;
   const campaign = capacity?.campaign_targets || configured.campaignTargets || {};
+  const performance = (state.pipelineReport.products || []).find((entry) => entry.product === product.key) || { actual: {}, conversion: {}, target: campaign };
+  const actual = performance.actual || {};
+  const measuredTarget = performance.target || campaign;
   const portfolio = revenue?.portfolio_strategy || {};
   const el = h("section", { class: "page" });
 
@@ -562,10 +578,10 @@ function renderOverview() {
         })
       ]),
       h("div", { class: "revenue-metrics" }, [
-        metric("30-day booked target", money(campaign.bookedRevenueUsd || math.target_closed_revenue_usd || 40000)),
-        metric("Meetings", numberOrDash(campaign.bookedMeetings)),
-        metric("Proposals", numberOrDash(campaign.proposals)),
-        metric(product.key === "outagehub" ? "Paid pilots" : "Signed sprint", numberOrDash(campaign.paidWins))
+        metric("Booked revenue", `${money(actual.booked_one_time_usd)} / ${money(measuredTarget.bookedRevenueUsd || 40000)}`),
+        metric("Booked MRR", money(actual.booked_mrr_usd)),
+        metric("Implementation margin", actual.implementation_gross_margin == null ? "—" : `${Math.round(actual.implementation_gross_margin * 100)}%`),
+        metric(product.key === "outagehub" ? "Paid pilots" : "Signed sprint", `${actual.wins || 0} / ${measuredTarget.paidWins || 0}`)
       ]),
       portfolio.near_term_send_list ? h("p", { class: "revenue-note", text: portfolio.near_term_send_list }) : null
     ])
@@ -582,16 +598,19 @@ function renderOverview() {
         })
       ]),
       h("div", { class: "capacity-metrics" }, [
-        metric("Researched accounts", numberOrDash(campaign.researchedAccounts)),
-        metric("Named contacts", numberOrDash(campaign.named_contacts || targets.total_leads_required)),
-        metric("Booked meetings", numberOrDash(campaign.bookedMeetings)),
-        metric("Qualified calls", numberOrDash(campaign.qualifiedConversations)),
-        metric("Proposals", numberOrDash(campaign.proposals)),
-        metric("Paid wins", numberOrDash(campaign.paidWins))
+        metric("Researched accounts", `${actual.researched_accounts || 0} / ${measuredTarget.researchedAccounts || 0}`),
+        metric("Verified contacts", `${actual.verified_contacts || 0} / ${campaign.named_contacts || targets.total_leads_required || 0}`),
+        metric("Messages sent", String(actual.messages_sent || 0)),
+        metric("Positive replies", `${actual.positive_replies || 0}${performance.conversion?.positive_reply_rate == null ? "" : ` · ${Math.round(performance.conversion.positive_reply_rate * 100)}%`}`),
+        metric("Meetings", `${actual.meetings_held || 0} / ${measuredTarget.bookedMeetings || 0}`),
+        metric("Qualified", `${actual.qualified_opportunities || 0} / ${measuredTarget.qualifiedConversations || 0}`),
+        metric("Proposals", `${actual.proposals || 0} / ${measuredTarget.proposals || 0}`),
+        metric("Wins", `${actual.wins || 0} / ${measuredTarget.paidWins || 0}`),
+        metric("Proposal → win", performance.conversion?.proposal_to_win_rate == null ? "—" : `${Math.round(performance.conversion.proposal_to_win_rate * 100)}%`)
       ]),
       h("div", { class: "capacity-actions" }, [
         h("button", { class: "btn", text: "Refresh capacity", onclick: () => postAction(`/api/run/${productSlug("pipeline-capacity")}`) }),
-        h("button", { class: "btn primary", text: "Build named-account cohort", onclick: () => postAction("/api/prospect") })
+        h("button", { class: "btn primary", text: "Review approvals", onclick: () => go("approvals") })
       ])
     ])
   );
@@ -967,17 +986,13 @@ function renderMemoryComposer(lead) {
     ].map(([v, l]) => h("option", { value: v, text: l }))
   );
   const summaryInput = h("input", { class: "search", type: "text", placeholder: "Summary / detail…" });
-  const sentimentSel = h("select", { class: "stage-select" },
-    ["positive", "neutral", "objection", "negative"].map((s) => h("option", { value: s, text: humanize(s) }))
-  );
   const resultSel = h("select", { class: "stage-select" },
     ["replied", "meeting_booked", "won", "lost", "bounced"].map((s) => h("option", { value: s, text: humanize(s) }))
   );
 
-  const extra = h("div", { class: "memory-composer-extra" }, [sentimentSel]);
+  const extra = h("div", { class: "memory-composer-extra" });
   const syncExtra = () => {
-    if (typeSel.value === "reply") extra.replaceChildren(sentimentSel);
-    else if (typeSel.value === "outcome") extra.replaceChildren(resultSel);
+    if (typeSel.value === "outcome") extra.replaceChildren(resultSel);
     else extra.replaceChildren();
   };
   typeSel.addEventListener("change", syncExtra);
@@ -985,7 +1000,7 @@ function renderMemoryComposer(lead) {
   const submit = () => {
     const type = typeSel.value;
     const payload = { summary: summaryInput.value.trim() };
-    if (type === "reply") payload.sentiment = sentimentSel.value;
+    if (type === "reply") payload.body = summaryInput.value.trim();
     if (type === "outcome") {
       payload.result = resultSel.value;
       payload.angle = lead.outreach_angle || "";
@@ -1022,7 +1037,7 @@ function renderOutreach() {
   // pick list
   const list = h("div", { class: "list-col" });
   const totalSequenced = allSequenceLeads.length;
-  list.append(pageHead("Outreach", "Sequences", `${sequenceReady.length}/${totalSequenced} shown · seven emails each`, null));
+  list.append(pageHead("Outreach", "Sequences", `${sequenceReady.length}/${totalSequenced} reviewed sequences shown`, null));
 
   const filters = h("div", { class: "filters outreach-filters" }, [
     h("input", {
@@ -1143,7 +1158,7 @@ function renderCompose() {
         h("span", { class: `chip stage-${lead.stage}`, text: stageLabel(lead.stage) })
       ]),
       lead.trigger_event ? h("p", { class: "compose-trig", text: lead.trigger_event }) : null,
-      h("div", { class: "detail-empty", text: "No seven-touch sequence found for this lead yet." }),
+      h("div", { class: "detail-empty", text: "No reviewed sequence found for this lead yet." }),
       h("div", { class: "gmail-actions" }, [
         h("button", { class: "btn primary", text: "Run sequence drafter", onclick: () => postAction(`/api/run/${productSlug("email-sequence-drafter")}`) })
       ])
@@ -1216,9 +1231,14 @@ function renderCompose() {
 
   // Actions
   const actions = h("div", { class: "gmail-actions" }, [
-    h("button", { class: "btn primary", text: "Open in Gmail", onclick: () => window.open(gmailUrl(toInput.value, subjInput.value, body.value), "_blank") }),
+    h("button", { class: "btn primary", text: "Submit for approval", onclick: async () => {
+      try {
+        await apiPost("/api/outreach-queue", { lead_id: lead.id, touch_number: activeEmail.touch_number, recipient: toInput.value, subject: subjInput.value, body: body.value, scheduled_at: null, review_status: sequence.send_readiness || "needs_human_review", evidence: activeEmail.grounding_used || sequence.source_urls || [] });
+        toast("Submitted for approval"); await load(); go("approvals");
+      } catch (error) { toast(error.message); }
+    } }),
     h("button", { class: "btn", text: "Copy email", onclick: async () => { await navigator.clipboard.writeText(`Subject: ${subjInput.value}\n\n${body.value}`); toast("Copied"); } }),
-    h("button", { class: "btn", text: "Copy all 7", onclick: async () => {
+    h("button", { class: "btn", text: `Copy all ${emails.length}`, onclick: async () => {
       const all = emails.map((email) => `Email ${email.touch_number}: ${email.recommended_subject || ""}\n\n${email.body || ""}`).join("\n\n---\n\n");
       await navigator.clipboard.writeText(all);
       toast("Sequence copied");
@@ -1226,12 +1246,7 @@ function renderCompose() {
     h("button", { class: "btn ghost", text: "Reset this touch", onclick: () => { resetSequenceDraft(lead.id, activeEmail.touch_number); render(); } }),
     h("span", { class: "spacer" }),
     (statusEl = h("span", { class: "save-status", text: "" })),
-    lead.stage === "contacted"
-      ? h("button", { class: "btn contacted-state", text: "Contacted", disabled: "true" })
-      : h("button", { class: "btn primary", text: "Mark contacted", onclick: () => patchLead(lead.id, { stage: "contacted" }) }),
-    lead.stage === "contacted"
-      ? h("button", { class: "btn ghost", text: "Undo", onclick: () => patchLead(lead.id, { stage: "to_contact" }) })
-      : null
+    h("span", { class: "muted", text: "Sent status is recorded only from Gmail or the canonical event API." })
   ]);
 
   win.append(fromRow, toRow, toExtra, subjRow, subjChips, body, actions);
@@ -1246,7 +1261,7 @@ function renderCompose() {
   const trig = lead.trigger_event ? h("p", { class: "compose-trig", text: lead.trigger_event }) : null;
 
   const note = h("div", { class: "draft-note" }, [
-    h("span", { class: "chip ai", text: sequence.sequence_source === "reviewed" ? "Reviewed 7-touch sequence" : "7-touch AI sequence" }),
+    h("span", { class: "chip ai", text: sequence.sequence_source === "reviewed" ? `Reviewed ${emails.length}-touch sequence` : `${emails.length}-touch draft sequence` }),
     sequence.review_score != null ? h("span", { class: "chip fit", text: `review ${sequence.review_score}` }) : null,
     sequence.send_readiness ? h("span", { class: "chip", text: humanize(sequence.send_readiness) }) : null,
     activeEmail.why_this_touch ? h("span", { class: "draft-why", text: activeEmail.why_this_touch }) : null
@@ -1260,7 +1275,126 @@ function renderCompose() {
     activeEmail.review_notes ? h("p", {}, [h("strong", { text: "Reviewer: " }), activeEmail.review_notes]) : null
   ]);
 
-  return h("div", { class: "compose-wrap" }, [ctx, trig, note, sequenceNav, strategyNotes, win]);
+  const meeting = lead.stage === "replied" ? renderMeetingControls(lead) : null;
+  return h("div", { class: "compose-wrap" }, [ctx, trig, note, sequenceNav, strategyNotes, meeting, win]);
+}
+
+function renderMeetingControls(lead) {
+  const slots = state.meetingProposals[lead.id] || [];
+  const brief = state.callBriefs[lead.id] || null;
+  const calendarReady = state.integrations.calendar?.configured;
+  return h("section", { class: "meeting-controls" }, [
+    h("div", {}, [h("strong", { text: "Meeting handling" }), h("p", { class: "muted", text: "Offer times after a positive reply; booking remains an explicit human action." })]),
+    h("button", { class: "btn sm", text: "Propose times", onclick: async () => {
+      try {
+        const result = await apiPost("/api/meetings/proposals", { lead_id: lead.id, timezone: "Europe/London", count: 3 });
+        state.meetingProposals[lead.id] = result.slots || []; render();
+      } catch (error) { toast(error.message); }
+    } }),
+    h("button", { class: "btn ghost sm", text: "Prepare call brief", onclick: async () => {
+      try {
+        const response = await fetch(productUrl(`/api/call-brief?lead=${encodeURIComponent(lead.id)}`));
+        const result = await response.json(); if (!response.ok) throw new Error(result.error || "Could not prepare brief");
+        state.callBriefs[lead.id] = result.brief; render();
+      } catch (error) { toast(error.message); }
+    } }),
+    ...slots.map((slot) => h("button", { class: "btn ghost sm", disabled: calendarReady ? null : "true", text: new Date(slot.starts_at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" }), onclick: async () => {
+      if (!window.confirm("Book this time and send the calendar invitation?")) return;
+      try { await apiPost("/api/meetings/book", { lead_id: lead.id, ...slot }); toast("Meeting booked"); await load(); }
+      catch (error) { toast(error.message); }
+    } })),
+    brief ? h("div", { class: "call-brief" }, [
+      h("strong", { text: "Call brief" }),
+      h("p", { text: brief.objective }),
+      brief.latest_reply?.body ? h("p", {}, [h("strong", { text: "Reply: " }), brief.latest_reply.body]) : null,
+      h("ul", {}, (brief.discovery_questions || []).map((question) => h("li", { text: question })))
+    ]) : null
+  ]);
+}
+
+/* ---------- page: Approvals ---------- */
+function renderApprovals() {
+  const product = activeProduct();
+  const el = h("section", { class: "page" });
+  const pending = state.outreachQueue.filter((message) => message.status === "pending_approval");
+  const providerDrafts = state.outreachQueue.filter((message) => message.status === "provider_draft");
+  const gmail = state.integrations.gmail || {};
+  const calendar = state.integrations.calendar || {};
+
+  el.append(pageHead(
+    "Control",
+    `${product.name} approvals`,
+    `${pending.length} messages awaiting approval · unrestricted autonomous sending is disabled`,
+    [
+      h("button", { class: "btn", text: "Sync Gmail", disabled: gmail.configured ? null : "true", onclick: async () => {
+        try { const result = await apiPost("/api/gmail/sync"); toast(`${result.events_recorded || 0} mailbox events recorded`); await load(); }
+        catch (error) { toast(error.message); }
+      } }),
+      h("button", { class: "btn primary", text: "Open outreach", onclick: () => go("outreach") })
+    ]
+  ));
+
+  el.append(h("div", { class: "integration-strip" }, [
+    h("div", { class: `integration-card ${gmail.configured ? "ready" : "blocked"}` }, [
+      h("strong", { text: "Gmail" }), h("span", { text: gmail.configured ? `Connected · ${gmail.email || "account ready"}` : "Not configured" }),
+      !gmail.configured ? h("small", { text: "Add Google OAuth credentials to create drafts and observe sent/reply events." }) : null
+    ]),
+    h("div", { class: `integration-card ${calendar.configured ? "ready" : "blocked"}` }, [
+      h("strong", { text: "Google Calendar" }), h("span", { text: calendar.configured ? `Connected · ${calendar.calendar || "calendar ready"}` : "Not configured" }),
+      !calendar.configured ? h("small", { text: "Add Google OAuth credentials before booking external meetings." }) : null
+    ])
+  ]));
+
+  const cohortGrid = h("div", { class: "approval-grid" });
+  for (const cohort of state.cohorts) {
+    cohortGrid.append(h("article", { class: "approval-card" }, [
+      h("div", { class: "approval-card-head" }, [
+        h("strong", { text: cohort.cohort_id }),
+        h("span", { class: `chip ${cohort.status === "approved" ? "fit" : ""}`, text: humanize(cohort.status || "draft") })
+      ]),
+      h("p", { class: "muted", text: cohort.play_id ? `${cohort.play_id} · ${cohort.strategy_version}` : "Triage cohort · no sales play assigned" }),
+      cohort.rules ? h("p", { class: "small-copy", text: `Rules approved by ${cohort.approved_by || "operator"}; automatic sending: off.` }) : null,
+      cohort.status !== "approved" && cohort.play_id ? h("button", { class: "btn primary sm", text: "Approve cohort rules", onclick: async () => {
+        try {
+          await apiPost(`/api/cohorts/${encodeURIComponent(cohort.cohort_id)}/approve`, { approved_by: "operator", rules: { product: product.key, play_id: cohort.play_id, strategy_version: cohort.strategy_version, human_message_approval_required: true, auto_send: false } });
+          toast("Cohort approved"); await load();
+        } catch (error) { toast(error.message); }
+      } }) : null
+    ]));
+  }
+  el.append(h("section", { class: "block" }, [h("h2", { class: "block-title", text: "Cohort rules" }), cohortGrid]));
+
+  const messageList = h("div", { class: "approval-list" });
+  for (const message of state.outreachQueue) {
+    messageList.append(h("article", { class: `approval-message status-${message.status}` }, [
+      h("div", { class: "approval-card-head" }, [
+        h("div", {}, [h("strong", { text: `${message.name} · ${message.company}` }), h("p", { class: "muted", text: `${humanize(message.message_type)}${message.touch_number ? ` · touch ${message.touch_number}` : ""}` })]),
+        h("span", { class: "chip", text: humanize(message.status) })
+      ]),
+      h("p", { class: "message-subject", text: message.subject }),
+      h("p", { class: "message-preview", text: message.body.slice(0, 260) }),
+      h("div", { class: "approval-actions" }, [
+        message.status === "pending_approval" ? h("button", { class: "btn primary sm", text: "Approve", onclick: async () => {
+          try { await apiPost(`/api/outreach-queue/${message.id}/approve`, { approved_by: "operator" }); toast("Message approved"); await load(); }
+          catch (error) { toast(error.message); }
+        } }) : null,
+        message.status === "pending_approval" ? h("button", { class: "btn ghost sm", text: "Reject", onclick: async () => {
+          const reason = window.prompt("Why should this message be rejected?"); if (!reason) return;
+          try { await apiPost(`/api/outreach-queue/${message.id}/reject`, { reason }); toast("Message rejected"); await load(); }
+          catch (error) { toast(error.message); }
+        } }) : null,
+        message.status === "approved" ? h("button", { class: "btn primary sm", text: "Create Gmail draft", disabled: gmail.configured ? null : "true", onclick: async () => {
+          try { await apiPost(`/api/outreach-queue/${message.id}/draft`); toast("Gmail draft created"); await load(); }
+          catch (error) { toast(error.message); }
+        } }) : null,
+        message.status === "provider_draft" ? h("span", { class: "muted", text: "Draft ready in Gmail. Send there; sync will capture sent and replies." }) : null,
+        message.status === "stopped" ? h("span", { class: "warn-line", text: `Stopped automatically: ${message.stopped_reason}` }) : null
+      ])
+    ]));
+  }
+  if (!state.outreachQueue.length) messageList.append(h("p", { class: "muted", text: "No sequences have been submitted for approval." }));
+  el.append(h("section", { class: "block" }, [h("h2", { class: "block-title", text: `Message queue${providerDrafts.length ? ` · ${providerDrafts.length} Gmail drafts` : ""}` }), messageList]));
+  return el;
 }
 
 /* ---------- page: Calendar ---------- */
@@ -2030,6 +2164,7 @@ function render() {
     overview: renderOverview,
     leads: renderLeads,
     outreach: renderOutreach,
+    approvals: renderApprovals,
     calendar: renderCalendar,
     intelligence: renderIntelligence,
     activity: renderActivity
@@ -2037,7 +2172,7 @@ function render() {
   stageEl.replaceChildren((views[state.view] || renderOverview)());
 }
 
-const VIEWS = new Set(["overview", "leads", "outreach", "calendar", "intelligence", "activity"]);
+const VIEWS = new Set(["overview", "leads", "outreach", "approvals", "calendar", "intelligence", "activity"]);
 
 function go(view, opts = {}) {
   state.view = view;

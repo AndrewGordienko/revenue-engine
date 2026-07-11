@@ -1399,7 +1399,7 @@
       "slug": "gnk-industry-map",
       "name": "GNK Industry Map",
       "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
-      "sequence": 2.5,
+      "sequence": 4.5,
       "dependsOn": [
         "revenue-demand-radar",
         "gnk-company-context",
@@ -1433,7 +1433,7 @@
       "slug": "outagehub-industry-map",
       "name": "OutageHub Industry Map",
       "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
-      "sequence": 102.5,
+      "sequence": 104.5,
       "dependsOn": [
         "revenue-demand-radar",
         "outagehub-company-context",

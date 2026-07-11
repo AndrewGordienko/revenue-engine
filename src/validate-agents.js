@@ -81,6 +81,7 @@ async function validateAgent(agent, slugSet) {
 async function main() {
   const registry = await readRegistry();
   const slugSet = new Set(registry.agents.map((agent) => agent.slug));
+  const bySlug = new Map(registry.agents.map((agent) => [agent.slug, agent]));
   const idSet = new Set();
   const sequenceSet = new Set();
   const problems = [];
@@ -97,6 +98,13 @@ async function main() {
     sequenceSet.add(agent.sequence);
 
     problems.push(...(await validateAgent(agent, slugSet)));
+    if (!Array.isArray(agent.outputs) || !agent.outputs.length) problems.push(`${agent.slug}: outputs must be a non-empty array`);
+    for (const dependency of agent.dependsOn || []) {
+      const upstream = bySlug.get(dependency);
+      if (upstream && Number(upstream.sequence) >= Number(agent.sequence)) {
+        problems.push(`${agent.slug}: dependency ${dependency} must run earlier (${upstream.sequence} >= ${agent.sequence})`);
+      }
+    }
   }
 
   if (problems.length > 0) {

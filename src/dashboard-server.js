@@ -9,8 +9,11 @@ import { ingestFromState } from "./ingest-leads.js";
 import { recommendedProspectPlan } from "./pipeline-capacity.js";
 import { loadGraph, toGraphView, graphSummary } from "./ontology.js";
 import { appendMemory, leadMemory, memorySummary, MEMORY_EVENT_TYPES } from "./lead-memory.js";
-import { recordOutcomeInsight } from "./ontology-record.js";
 import { buildPipelineReport } from "./pipeline-report.js";
+import { listRevenueEvents, recordRevenueEvent } from "./revenue-events.js";
+import { approveOutreachCohort, approveOutreachMessage, createProviderDraft, listCohorts, listOutreachMessages, queueOutreachMessage, rejectOutreachMessage, sendApprovedDraft, syncGmail } from "./outreach-queue.js";
+import { GmailProvider, GoogleCalendarProvider, googleWorkspaceStatus } from "./google-workspace.js";
+import { bookMeeting, buildCallBrief, listMeetings, proposeMeetingTimes } from "./meetings.js";
 
 const preferredPort = Number(process.env.PORT || 8792);
 const maxPort = preferredPort + 20;
@@ -204,7 +207,94 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/pipeline-report" && request.method === "GET") {
-      sendJson(response, 200, buildPipelineReport());
+      sendJson(response, 200, buildPipelineReport(undefined, await readRegistry()));
+      return;
+    }
+
+    if (url.pathname === "/api/integrations" && request.method === "GET") {
+      sendJson(response, 200, await googleWorkspaceStatus());
+      return;
+    }
+
+    if (url.pathname === "/api/cohorts" && request.method === "GET") {
+      sendJson(response, 200, { cohorts: listCohorts(productPrefixFromUrl(url)) });
+      return;
+    }
+
+    const cohortApproveMatch = url.pathname.match(/^\/api\/cohorts\/([^/]+)\/approve$/);
+    if (cohortApproveMatch && request.method === "POST") {
+      try {
+        const body = await readBody(request);
+        sendJson(response, 200, { ok: true, cohort: approveOutreachCohort(decodeURIComponent(cohortApproveMatch[1]), body) });
+      } catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+
+    if (url.pathname === "/api/revenue-events" && request.method === "GET") {
+      sendJson(response, 200, { events: listRevenueEvents(url.searchParams.get("lead")) });
+      return;
+    }
+
+    if (url.pathname === "/api/revenue-events" && request.method === "POST") {
+      try { sendJson(response, 201, { ok: true, ...(await recordRevenueEvent(await readBody(request))) }); }
+      catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+
+    if (url.pathname === "/api/outreach-queue" && request.method === "GET") {
+      sendJson(response, 200, { messages: listOutreachMessages({ product: productPrefixFromUrl(url), status: url.searchParams.get("status") || null }) });
+      return;
+    }
+    if (url.pathname === "/api/outreach-queue" && request.method === "POST") {
+      try { sendJson(response, 201, { ok: true, message: queueOutreachMessage(await readBody(request)) }); }
+      catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+
+    const outreachAction = url.pathname.match(/^\/api\/outreach-queue\/(\d+)\/(approve|reject|draft|send)$/);
+    if (outreachAction && request.method === "POST") {
+      const id = Number(outreachAction[1]);
+      const action = outreachAction[2];
+      const body = await readBody(request);
+      try {
+        const result = action === "approve" ? approveOutreachMessage(id, body)
+          : action === "reject" ? rejectOutreachMessage(id, body)
+          : action === "draft" ? await createProviderDraft(id, new GmailProvider())
+          : await sendApprovedDraft(id, new GmailProvider(), { confirmed: body.confirmed === true });
+        sendJson(response, 200, { ok: true, result });
+      } catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+
+    if (url.pathname === "/api/gmail/sync" && request.method === "POST") {
+      try { sendJson(response, 200, { ok: true, ...(await syncGmail(new GmailProvider())) }); }
+      catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+
+    if (url.pathname === "/api/meetings" && request.method === "GET") {
+      sendJson(response, 200, { meetings: listMeetings(url.searchParams.get("lead") || null) });
+      return;
+    }
+    if (url.pathname === "/api/call-brief" && request.method === "GET") {
+      try { sendJson(response, 200, { ok: true, brief: buildCallBrief(url.searchParams.get("lead")) }); }
+      catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+    if (url.pathname === "/api/meetings/proposals" && request.method === "POST") {
+      const body = await readBody(request);
+      try {
+        const provider = new GoogleCalendarProvider();
+        const status = await provider.status();
+        sendJson(response, 200, { ok: true, ...(await proposeMeetingTimes({ ...body, provider: status.configured ? provider : null })), calendar_configured: status.configured });
+      }
+      catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
+      return;
+    }
+    if (url.pathname === "/api/meetings/book" && request.method === "POST") {
+      const body = await readBody(request);
+      try { sendJson(response, 201, { ok: true, meeting: await bookMeeting({ ...body, provider: new GoogleCalendarProvider() }) }); }
+      catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
       return;
     }
 
@@ -316,22 +406,10 @@ const server = http.createServer(async (request, response) => {
         return;
       }
       try {
-        const event = await appendMemory(product, {
-          lead_id: leadId,
-          type,
-          actor: body.actor || "operator",
-          payload: body.payload || {}
-        });
-        // Close the loop: replies / outcomes feed the strategy graph.
-        if (type === "outcome" || (type === "reply" && body.payload?.sentiment)) {
-          const p = body.payload || {};
-          await recordOutcomeInsight(product, {
-            result: p.result || p.sentiment,
-            angle: p.angle,
-            segment: p.segment,
-            company: p.company
-          }).catch(() => null);
-        }
+        const canonicalType = { email_sent: "sent", reply: "reply", meeting: "meeting", outcome: "outcome" }[type];
+        const event = canonicalType
+          ? await recordRevenueEvent({ lead_id: leadId, type: canonicalType, source: "dashboard-manual", payload: body.payload || {} })
+          : await appendMemory(product, { lead_id: leadId, type, actor: body.actor || "operator", payload: body.payload || {} });
         sendJson(response, 201, { ok: true, event, ...(await leadMemory(product, leadId)) });
       } catch (error) {
         sendJson(response, 400, { ok: false, error: error.message });

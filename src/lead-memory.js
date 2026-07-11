@@ -17,7 +17,8 @@ function normalizeProduct(value) {
 }
 
 function memoryPath(product = "gnk") {
-  return fromRoot("data", `lead-memory-${normalizeProduct(product)}.jsonl`);
+  const root = process.env.LEAD_MEMORY_DIR || fromRoot("data");
+  return path.join(root, `lead-memory-${normalizeProduct(product)}.jsonl`);
 }
 
 // note        — free text (operator)

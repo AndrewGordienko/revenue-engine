@@ -1,5 +1,6 @@
 import { findAgent, publishArtifact, readRegistry, readState } from "./bus.js";
 import { readLeads } from "./leads-store.js";
+import { STRATEGY_VERSION } from "./sales-plays.js";
 
 const DEFAULT_ASSUMPTIONS = {
   workingDaysPerMonth: 22,
@@ -124,7 +125,7 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
   const totalLeadsRequired = campaign ? monthlyFirstTouchesRequired : ceil(monthlyFirstTouchesRequired * (1 + assumptions.pipelineInventoryBufferRate));
 
   const currentTotal = leads.length;
-  const currentWithEmail = leads.filter((lead) => lead.email_best).length;
+  const currentWithEmail = leads.filter((lead) => lead.email_best && lead.deliverability_status === "deliverable" && lead.address_found_or_guessed !== "guessed").length;
   const currentSequenceReady = leads.filter((lead) => {
     return lead.email_best && (lead.email_subject || lead.email_body || lead.stage === "to_contact");
   }).length;
@@ -148,6 +149,7 @@ export function calculatePipelineCapacity({ registry, state, leads, agent = null
   );
 
   return {
+    strategy_version: STRATEGY_VERSION,
     capacity_summary: campaign
       ? `${productForAgent(agent) === "gnk" ? "One-deal" : "Paid-pilot"} campaign: research ${researchedAccountsRequired} accounts, map ${monthlyFirstTouchesRequired} named contacts, create ${campaign.bookedMeetings} meetings, ${campaign.qualifiedConversations} qualified conversations, ${campaign.proposals} proposals, and ${requiredClosedDeals} paid win${requiredClosedDeals === 1 ? "" : "s"} worth ${targetClosedRevenueUsd.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}.`
       : `Maintain about ${totalLeadsRequired} total leads, ${sendReadyLeadsRequired} send-ready leads, ${dailyFirstTouchesRequired} new first-touch emails per working day, and about ${dailyTotalEmailsRequired} total sequence emails per working day.`,
