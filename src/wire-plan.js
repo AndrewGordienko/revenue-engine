@@ -14,7 +14,7 @@ import { scoreLead } from "./scoring.js";
 const now = () => new Date().toISOString();
 
 // Heuristic play assignment from the lead's research signals. Returns { play_id, confident }.
-function assignPlay(lead) {
+export function assignPlay(lead) {
   const text = `${lead.title} ${lead.segment} ${lead.trigger_event} ${lead.why_now} ${lead.outreach_angle} ${lead.company} ${lead.first_contract_slice}`.toLowerCase();
   if (lead.product === "gnk") {
     if (/\b(ai|agent|agentic|ml|model|llm|genai|copilot)\b/.test(text)) return { play_id: "GNK-AI-01", confident: true };
@@ -80,4 +80,6 @@ function main() {
   console.log(`report: data/wire-plan-report.json`);
 }
 
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
