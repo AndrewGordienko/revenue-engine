@@ -78,6 +78,30 @@ async function validateAgent(agent, slugSet) {
   return problems;
 }
 
+const EXECUTION_TIERS = new Set(["control", "cohort", "lead", "deterministic"]);
+const CADENCES = new Set(["weekly", "monthly", "per_cohort", "per_lead", "event_driven"]);
+
+// PR3 operating model: every agent must declare where it sits in the pipeline,
+// how often it runs, and its freshness/cost/runtime budgets. This is what lets
+// the named pipelines run only the right tier and keeps strategy agents off the
+// per-lead path.
+function validateOperatingModel(agent) {
+  const problems = [];
+  if (!EXECUTION_TIERS.has(agent.executionTier)) problems.push(`${agent.slug}: executionTier must be one of ${[...EXECUTION_TIERS].join("|")}`);
+  if (!CADENCES.has(agent.cadence)) problems.push(`${agent.slug}: cadence must be one of ${[...CADENCES].join("|")}`);
+  if (typeof agent.criticalPath !== "boolean") problems.push(`${agent.slug}: criticalPath must be a boolean`);
+  if (typeof agent.benchmarkRequired !== "boolean") problems.push(`${agent.slug}: benchmarkRequired must be a boolean`);
+  for (const field of ["staleAfterHours", "maxRuntimeSeconds", "maxCostUsd"]) {
+    if (typeof agent[field] !== "number" || agent[field] < 0) problems.push(`${agent.slug}: ${field} must be a non-negative number`);
+  }
+  // Guardrail: control-tier (strategy) agents must never sit on the live per-lead
+  // critical path — that is exactly the drift PR3 removes.
+  if (agent.executionTier === "control" && agent.criticalPath) {
+    problems.push(`${agent.slug}: control-tier agents must not be on the critical path`);
+  }
+  return problems;
+}
+
 async function main() {
   const registry = await readRegistry();
   const slugSet = new Set(registry.agents.map((agent) => agent.slug));
@@ -98,6 +122,7 @@ async function main() {
     sequenceSet.add(agent.sequence);
 
     problems.push(...(await validateAgent(agent, slugSet)));
+    problems.push(...validateOperatingModel(agent));
     if (!Array.isArray(agent.outputs) || !agent.outputs.length) problems.push(`${agent.slug}: outputs must be a non-empty array`);
     for (const dependency of agent.dependsOn || []) {
       const upstream = bySlug.get(dependency);

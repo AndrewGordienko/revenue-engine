@@ -51,8 +51,15 @@
     "report:pipeline": "node src/pipeline-report.js",
     "fixture:dashboard": "node scripts/seed-dashboard-fixture.mjs",
     "dedupe:leads": "node src/dedupe-leads.js",
-    "pipeline:gnk": "node src/run-sequence.js",
-    "pipeline:ohub": "node src/run-sequence.js outagehub",
+    "strategy:refresh": "node src/run-pipeline.js strategy:refresh",
+    "cohort:build:gnk": "node src/run-pipeline.js cohort:build gnk",
+    "cohort:build:ohub": "node src/run-pipeline.js cohort:build outagehub",
+    "lead:prepare": "node src/run-pipeline.js lead:prepare",
+    "mailbox:sync": "node src/ops-cli.js mailbox:sync",
+    "reply:handle": "node src/ops-cli.js reply:handle",
+    "meeting:prepare": "node src/ops-cli.js meeting:prepare",
+    "pipeline:gnk": "node src/run-pipeline.js full gnk",
+    "pipeline:ohub": "node src/run-pipeline.js full outagehub",
     "validate:agents": "node src/validate-agents.js",
     "regenerate:leads": "node src/regenerate-leads.js",
     "ontology": "node src/ontology-cli.js",
@@ -66,7 +73,8 @@
     "crm:wire": "node src/wire-plan.js",
     "crm:test": "node --test src/crm.test.js",
     "revenue:test": "node --test src/revenue-loop.test.js",
-    "test": "node --test src/crm.test.js src/revenue-loop.test.js"
+    "draft-only:test": "node --test src/draft-only.test.js",
+    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js"
   },
   "engines": {
     "node": ">=22.5.0"

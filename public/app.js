@@ -1321,10 +1321,18 @@ function renderApprovals() {
   const gmail = state.integrations.gmail || {};
   const calendar = state.integrations.calendar || {};
 
+  const draftOnly = state.integrations.outbound_sending_enabled !== true;
+  if (draftOnly) {
+    el.append(h("div", { class: "draft-only-banner" }, [
+      h("strong", { text: "Draft-only mode" }),
+      h("span", { text: "Outbound sending is disabled. The engine researches, writes, reviews, queues, and can create Gmail drafts — but never sends. Send from Gmail yourself when you choose to." })
+    ]));
+  }
+
   el.append(pageHead(
     "Control",
     `${product.name} approvals`,
-    `${pending.length} messages awaiting approval · unrestricted autonomous sending is disabled`,
+    `${pending.length} messages awaiting approval · ${draftOnly ? "draft-only mode — nothing sends automatically" : "sending ENABLED"}`,
     [
       h("button", { class: "btn", text: "Sync Gmail", disabled: gmail.configured ? null : "true", onclick: async () => {
         try { const result = await apiPost("/api/gmail/sync"); toast(`${result.events_recorded || 0} mailbox events recorded`); await load(); }

@@ -13,6 +13,7 @@ import { buildPipelineReport } from "./pipeline-report.js";
 import { listRevenueEvents, recordRevenueEvent } from "./revenue-events.js";
 import { approveOutreachCohort, approveOutreachMessage, createProviderDraft, listCohorts, listOutreachMessages, queueOutreachMessage, rejectOutreachMessage, sendApprovedDraft, syncGmail } from "./outreach-queue.js";
 import { GmailProvider, GoogleCalendarProvider, googleWorkspaceStatus } from "./google-workspace.js";
+import { sendingEnabled } from "./outbound-guard.js";
 import { bookMeeting, buildCallBrief, listMeetings, proposeMeetingTimes } from "./meetings.js";
 
 const preferredPort = Number(process.env.PORT || 8792);
@@ -212,7 +213,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/integrations" && request.method === "GET") {
-      sendJson(response, 200, await googleWorkspaceStatus());
+      sendJson(response, 200, { ...(await googleWorkspaceStatus()), outbound_sending_enabled: sendingEnabled(), mode: sendingEnabled() ? "sending" : "draft_only" });
       return;
     }
 
@@ -256,6 +257,10 @@ const server = http.createServer(async (request, response) => {
       const id = Number(outreachAction[1]);
       const action = outreachAction[2];
       const body = await readBody(request);
+      if (action === "send" && !sendingEnabled()) {
+        sendJson(response, 403, { ok: false, error: "Draft-only mode: outbound sending is disabled. Create a Gmail draft and send it yourself from Gmail." });
+        return;
+      }
       try {
         const result = action === "approve" ? approveOutreachMessage(id, body)
           : action === "reject" ? rejectOutreachMessage(id, body)

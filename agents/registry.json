@@ -11,11 +11,19 @@
     "minimumEngagementLength": "four to six weeks",
     "targetContractShape": "One fixed-scope Production AI, Backend Stabilization, or Data and Operations Automation Sprint at $40k-$60k, with a 50% deposit or first month paid upfront.",
     "positioning": "A senior engineering strike team that takes business-critical software and AI projects from stuck or risky to working production systems in four to six weeks.",
-    "namedMethod": ["Shape", "Build", "Prove", "Transfer"],
+    "namedMethod": [
+      "Shape",
+      "Build",
+      "Prove",
+      "Transfer"
+    ],
     "fallbackOffer": {
       "name": "Paid Shaping Engagement",
       "duration": "one week",
-      "priceUsdRange": [7500, 12500],
+      "priceUsdRange": [
+        7500,
+        12500
+      ],
       "creditedAgainstSprint": true
     },
     "qualificationFocus": [
@@ -43,7 +51,11 @@
       "proposals": 4,
       "paidWins": 1,
       "bookedRevenueUsd": 40000,
-      "channelAllocation": { "warm_network": 0.35, "triggered_outbound": 0.45, "partners": 0.2 }
+      "channelAllocation": {
+        "warm_network": 0.35,
+        "triggered_outbound": 0.45,
+        "partners": 0.2
+      }
     },
     "outboundCapacityAssumptions": {
       "workingDaysPerMonth": 22,
@@ -62,9 +74,27 @@
       }
     },
     "offers": [
-      { "name": "Production AI Workflow Sprint", "priceUsdRange": [40000, 60000] },
-      { "name": "Backend Risk and Stabilization Sprint", "priceUsdRange": [35000, 50000] },
-      { "name": "Data and Operations Automation Sprint", "priceUsdRange": [40000, 60000] }
+      {
+        "name": "Production AI Workflow Sprint",
+        "priceUsdRange": [
+          40000,
+          60000
+        ]
+      },
+      {
+        "name": "Backend Risk and Stabilization Sprint",
+        "priceUsdRange": [
+          35000,
+          50000
+        ]
+      },
+      {
+        "name": "Data and Operations Automation Sprint",
+        "priceUsdRange": [
+          40000,
+          60000
+        ]
+      }
     ],
     "companySizeGuidance": {
       "tooSmall": "companies unlikely to afford a $40k first month unless a public funding, hiring, outage, launch, or compliance signal shows urgent budget",
@@ -83,19 +113,67 @@
   "portfolioStrategy": {
     "strategyVersion": "plan-2026-07-11",
     "immediateTargetUsd": 40000,
-    "effortAllocation": { "gnk": 0.6, "outagehub": 0.3, "revenue_engine": 0.1 },
-    "shared": ["CRM and cohort infrastructure", "Demand Radar research", "evidence verification", "reply learning", "reporting"],
-    "neverShared": ["positioning", "pricing", "offers", "proof requirements", "funnel economics", "sequence policy", "closing motion"]
+    "effortAllocation": {
+      "gnk": 0.6,
+      "outagehub": 0.3,
+      "revenue_engine": 0.1
+    },
+    "shared": [
+      "CRM and cohort infrastructure",
+      "Demand Radar research",
+      "evidence verification",
+      "reply learning",
+      "reporting"
+    ],
+    "neverShared": [
+      "positioning",
+      "pricing",
+      "offers",
+      "proof requirements",
+      "funnel economics",
+      "sequence policy",
+      "closing motion"
+    ]
   },
   "logicalFunctions": {
-    "demandRadar": ["revenue-demand-radar"],
-    "triggerMonitor": ["gnk-account-sourcing", "outagehub-account-sourcing"],
-    "accountSelector": ["gnk-account-scoring", "outagehub-account-scoring"],
-    "buyerMapper": ["gnk-contact-discovery", "outagehub-contact-discovery"],
-    "evidenceAndContactVerifier": ["gnk-email-finder", "outagehub-email-finder", "audit:contacts"],
-    "outreachComposer": ["gnk-outreach-angle", "gnk-email-drafter", "gnk-email-sequence-drafter", "gnk-email-sequence-reviewer", "outagehub-outreach-angle", "outagehub-email-drafter", "outagehub-email-sequence-drafter", "outagehub-email-sequence-reviewer"],
-    "replyAndObjectionClassifier": ["classify:reply"],
-    "pipelineController": ["gnk-pipeline-capacity", "outagehub-pipeline-capacity", "report:pipeline"]
+    "demandRadar": [
+      "revenue-demand-radar"
+    ],
+    "triggerMonitor": [
+      "gnk-account-sourcing",
+      "outagehub-account-sourcing"
+    ],
+    "accountSelector": [
+      "gnk-account-scoring",
+      "outagehub-account-scoring"
+    ],
+    "buyerMapper": [
+      "gnk-contact-discovery",
+      "outagehub-contact-discovery"
+    ],
+    "evidenceAndContactVerifier": [
+      "gnk-email-finder",
+      "outagehub-email-finder",
+      "audit:contacts"
+    ],
+    "outreachComposer": [
+      "gnk-outreach-angle",
+      "gnk-email-drafter",
+      "gnk-email-sequence-drafter",
+      "gnk-email-sequence-reviewer",
+      "outagehub-outreach-angle",
+      "outagehub-email-drafter",
+      "outagehub-email-sequence-drafter",
+      "outagehub-email-sequence-reviewer"
+    ],
+    "replyAndObjectionClassifier": [
+      "classify:reply"
+    ],
+    "pipelineController": [
+      "gnk-pipeline-capacity",
+      "outagehub-pipeline-capacity",
+      "report:pipeline"
+    ]
   },
   "agents": [
     {
@@ -104,15 +182,37 @@
       "name": "Revenue Demand Radar",
       "role": "Aggregate current market signals, cluster funded problems, and route named accounts to the correct GNK or OutageHub sales play without blending the two motions.",
       "sequence": 0.5,
-      "brands": ["gnk", "outagehub"],
+      "brands": [
+        "gnk",
+        "outagehub"
+      ],
       "dependsOn": [],
       "workspace": "openclaw-workspaces/salesv3-revenue-demand-radar",
       "agentDir": ".openclaw-agents/salesv3-revenue-demand-radar/agent",
       "model": "openai/gpt-5.4-mini",
-      "sourceUrls": ["https://www.gnk.software/", "https://www.outagehub.ca/"],
-      "outputs": ["radar_summary", "signal_clusters", "named_account_signals", "offer_demand", "durability_assessment", "trigger_monitor", "recommended_cohorts", "source_notes"],
+      "sourceUrls": [
+        "https://www.gnk.software/",
+        "https://www.outagehub.ca/"
+      ],
+      "outputs": [
+        "radar_summary",
+        "signal_clusters",
+        "named_account_signals",
+        "offer_demand",
+        "durability_assessment",
+        "trigger_monitor",
+        "recommended_cohorts",
+        "source_notes"
+      ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "weekly",
+      "staleAfterHours": 168,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-company-context",
@@ -135,7 +235,14 @@
         "open_questions",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-icp-contact-profile",
@@ -166,7 +273,14 @@
         "open_questions",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-boutique-growth-playbook",
@@ -205,7 +319,14 @@
         "open_questions",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-offer-map",
@@ -234,7 +355,14 @@
         "open_questions",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-revenue-strategy",
@@ -267,7 +395,14 @@
         "open_questions",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-pipeline-capacity",
@@ -295,7 +430,14 @@
         "recommended_prospecting",
         "operating_rules",
         "source_notes"
-      ]
+      ],
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "weekly",
+      "staleAfterHours": 168,
+      "maxRuntimeSeconds": 120,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-account-sourcing",
@@ -328,7 +470,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-account-scoring",
@@ -364,7 +513,14 @@
         "open_questions",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-contact-discovery",
@@ -396,7 +552,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-lead-persona-profile",
@@ -423,7 +586,14 @@
         "claims_to_avoid",
         "open_questions",
         "source_notes"
-      ]
+      ],
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "event_driven",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-client-dossier",
@@ -455,7 +625,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-outreach-angle",
@@ -494,7 +671,14 @@
       ],
       "execution": "api-key",
       "thinking": "high",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-sequence-strategy",
@@ -535,7 +719,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "thinking": "high"
+      "thinking": "high",
+      "executionTier": "deterministic",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 0,
+      "maxRuntimeSeconds": 60,
+      "maxCostUsd": 0.05,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-email-finder",
@@ -561,7 +752,14 @@
         "results",
         "source_notes"
       ],
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-email-drafter",
@@ -598,7 +796,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-email-sequence-drafter",
@@ -637,7 +842,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-gnk-email-sequence-reviewer",
@@ -680,7 +892,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-company-context",
@@ -709,7 +928,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-icp-contact-profile",
@@ -746,7 +972,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-boutique-growth-playbook",
@@ -786,7 +1019,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-offer-map",
@@ -821,7 +1061,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-market-coverage",
@@ -858,7 +1105,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-revenue-strategy",
@@ -898,7 +1152,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-pipeline-capacity",
@@ -933,7 +1194,14 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts."
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "weekly",
+      "staleAfterHours": 168,
+      "maxRuntimeSeconds": 120,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-account-sourcing",
@@ -973,7 +1241,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-account-scoring",
@@ -1016,7 +1291,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-contact-discovery",
@@ -1055,7 +1337,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-lead-persona-profile",
@@ -1086,7 +1375,14 @@
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts."
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "event_driven",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-client-dossier",
@@ -1125,7 +1421,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-outreach-angle",
@@ -1171,7 +1474,14 @@
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "thinking": "high",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-sequence-strategy",
@@ -1219,7 +1529,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "thinking": "high"
+      "thinking": "high",
+      "executionTier": "deterministic",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 0,
+      "maxRuntimeSeconds": 60,
+      "maxCostUsd": 0.05,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-email-finder",
@@ -1252,7 +1569,14 @@
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
-      "execution": "api-key"
+      "execution": "api-key",
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-email-drafter",
@@ -1296,7 +1620,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-outagehub-email-sequence-drafter",
@@ -1342,7 +1673,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-email-sequence-reviewer",
@@ -1392,7 +1730,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true
     },
     {
       "id": "salesv3-gnk-industry-map",
@@ -1426,7 +1771,14 @@
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     },
     {
       "id": "salesv3-outagehub-industry-map",
@@ -1467,7 +1819,14 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
-      "timeoutSeconds": 1800
+      "timeoutSeconds": 1800,
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
     }
   ],
   "commercialTargets": {
@@ -1503,7 +1862,12 @@
         "mrrTargetDaysMin": 60,
         "mrrTargetDaysMax": 120,
         "targetMrrUsd": 40000,
-        "channelAllocation": { "regional_isp": 0.27, "software_platform": 0.27, "operations_platform": 0.2, "multi_site_operator": 0.26 }
+        "channelAllocation": {
+          "regional_isp": 0.27,
+          "software_platform": 0.27,
+          "operations_platform": 0.2,
+          "multi_site_operator": 0.26
+        }
       },
       "outboundCapacityAssumptions": {
         "workingDaysPerMonth": 22,
@@ -1524,20 +1888,38 @@
       "dealTiers": [
         {
           "tier": "portfolio_monitoring_pilot",
-          "implementationUsdRange": [5000, 15000],
-          "monthlyValueUsdRange": [1500, 5000],
+          "implementationUsdRange": [
+            5000,
+            15000
+          ],
+          "monthlyValueUsdRange": [
+            1500,
+            5000
+          ],
           "targetSalesMotion": "defined site portfolio, one response decision, alerts/webhook, 30-day success review"
         },
         {
           "tier": "operational_pilot",
-          "implementationUsdRange": [7500, 15000],
-          "monthlyValueUsdRange": [2500, 5000],
+          "implementationUsdRange": [
+            7500,
+            15000
+          ],
+          "monthlyValueUsdRange": [
+            2500,
+            5000
+          ],
           "targetSalesMotion": "regional ISP/telecom NOC or support workflow with one triage or communications decision"
         },
         {
           "tier": "embedded_evaluation",
-          "implementationUsdRange": [15000, 30000],
-          "monthlyValueUsdRange": [7500, 15000],
+          "implementationUsdRange": [
+            15000,
+            30000
+          ],
+          "monthlyValueUsdRange": [
+            7500,
+            15000
+          ],
           "targetSalesMotion": "software platform embeds the intelligence layer in one downstream workflow, then expands by customers, volume, and regions"
         }
       ],

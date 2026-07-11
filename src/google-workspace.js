@@ -1,3 +1,5 @@
+import { assertSendingEnabled } from "./outbound-guard.js";
+
 const API = "https://www.googleapis.com";
 
 function base64url(value) {
@@ -63,6 +65,9 @@ export class GmailProvider {
     return { draft_id: draft.id, message_id: draft.message?.id, thread_id: draft.message?.threadId };
   }
   async sendDraft(draftId) {
+    // Last line of defense: even a confirmed caller cannot reach Gmail's send API
+    // in draft-only mode. This throws before any network call is made.
+    assertSendingEnabled("Gmail drafts.send", this.env);
     const sent = await googleFetch("/gmail/v1/users/me/drafts/send", { method: "POST", body: JSON.stringify({ id: draftId }) }, this.env);
     return { message_id: sent.id, thread_id: sent.threadId, sent_at: new Date(Number(sent.internalDate || Date.now())).toISOString() };
   }
