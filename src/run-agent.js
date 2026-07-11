@@ -242,6 +242,7 @@ function annotateAgentArtifact(agent, artifact, modelUsed) {
   const sourceNotes = Array.isArray(artifact.source_notes) ? artifact.source_notes : [];
   return {
     ...artifact,
+    strategy_version: STRATEGY_VERSION,
     generation_method: "openclaw_agent",
     generation_model: modelUsed,
     source_notes: [
@@ -340,11 +341,25 @@ function buildDependencyStatus(agent, state) {
     return {
       slug,
       present: Boolean(state.artifacts?.[slug]),
+      strategyVersion: state.artifacts?.[slug]?.strategy_version || null,
+      current: state.artifacts?.[slug]?.strategy_version === STRATEGY_VERSION,
       lastRunAt: upstreamAgent?.lastRunAt || null,
       status: upstreamAgent?.status || null,
       artifactKeys: state.artifacts?.[slug] ? Object.keys(state.artifacts[slug]) : []
     };
   });
+}
+
+export function dependenciesRequiringRefresh(statuses) {
+  return statuses.filter((dependency) => !dependency.present || !dependency.current);
+}
+
+export function validateArtifactContract(agent, artifact) {
+  if (!artifact || typeof artifact !== "object" || Array.isArray(artifact)) throw new Error(`${agent.slug} artifact must be a JSON object`);
+  const missing = (agent.outputs || []).filter((key) => !(key in artifact));
+  if (missing.length) throw new Error(`${agent.slug} artifact schema missing: ${missing.join(", ")}`);
+  if ("source_notes" in artifact && !Array.isArray(artifact.source_notes)) throw new Error(`${agent.slug} source_notes must be an array`);
+  return artifact;
 }
 
 function buildDownstreamConsumers(registry, agent) {
@@ -579,8 +594,7 @@ async function buildPrompt(registry, agent) {
   const inputFiles = await readInputFiles(agent);
   const messages = filterRelevantMessages(await readMessages(100), agent).slice(-12).map(summarizeMessage);
   const downstreamConsumers = buildDownstreamConsumers(registry, agent);
-  const missingDependencies = dependencyStatus
-    .filter((dependency) => !dependency.present)
+  const missingDependencies = dependenciesRequiringRefresh(dependencyStatus)
     .map((dependency) => dependency.slug);
   const communicationContext = {
     protocol: "salesv3-json-bus-v1",
@@ -795,12 +809,12 @@ async function runLocalAgent(registry, agent) {
   return buildPipelineCapacityArtifact(registry, agent);
 }
 
-async function main() {
+export async function main() {
   const slug = process.argv[2] || "gnk-company-context";
   const { registry, agent } = await findAgent(slug);
   const state = await readState();
   const dependencyStatus = buildDependencyStatus(agent, state);
-  const missingDependencies = dependencyStatus.filter((dependency) => !dependency.present);
+  const missingDependencies = dependenciesRequiringRefresh(dependencyStatus);
 
   await setAgentStatus(agent, "running");
   await appendMessage({
@@ -818,7 +832,7 @@ async function main() {
 
   if (missingDependencies.length > 0) {
     await appendMessage({
-      type: "dependency-warning",
+      type: "dependency-blocked",
       from: "runner",
       to: agent.id,
       summary: `${agent.name} has missing upstream artifacts`,
@@ -827,11 +841,14 @@ async function main() {
         missingDependencies
       }
     });
+    const reason = `fail-closed: missing or stale dependencies: ${missingDependencies.map((dependency) => `${dependency.slug}${dependency.present ? `@${dependency.strategyVersion || "unversioned"}` : "@missing"}`).join(", ")}`;
+    await setAgentStatus(agent, "failed", { reason });
+    throw new Error(reason);
   }
 
   try {
     if (agent.runner === "local") {
-      const artifact = await runLocalAgent(registry, agent);
+      const artifact = validateArtifactContract(agent, await runLocalAgent(registry, agent));
       const published = await publishArtifact(agent, artifact);
       await publishDownstreamHandoffs(registry, agent, published);
       console.log(JSON.stringify(published, null, 2));
@@ -848,7 +865,7 @@ async function main() {
 
     const artifact = enforceSourcingReachability(
       agent,
-      enforceSequencePolicy(agent, annotateAgentArtifact(
+      enforceSequencePolicy(agent, validateArtifactContract(agent, annotateAgentArtifact(
         agent,
         await maybeLoadLargeOutputArtifact(
           agent,
@@ -856,7 +873,7 @@ async function main() {
           runStartedAt
         ),
         modelUsed
-      ))
+      )))
     );
     const published = await publishArtifact(agent, artifact);
     await publishDownstreamHandoffs(registry, agent, published);
@@ -868,7 +885,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.stack || error.message);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(error.stack || error.message);
+    process.exit(1);
+  });
+}

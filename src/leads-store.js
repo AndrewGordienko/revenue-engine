@@ -9,6 +9,8 @@ import {
   STAGES, ALLOWED_TRANSITIONS, STAGE_REQUIRES_EVENT,
 } from "./crm-model.js";
 import { appendMemory } from "./lead-memory.js";
+import { STRATEGY_VERSION } from "./sales-plays.js";
+import { completePipelineRun, createPipelineLineage } from "./lineage.js";
 
 async function safeMemory(product, event) {
   try { await appendMemory(product, event); } catch { /* side channel */ }
@@ -29,7 +31,6 @@ const CANON_TO_LEGACY = {
   nurture: "new", contact_evidence_missing: "contacted",
 };
 
-const DEFAULT_STRATEGY = "v1-2026-07-08";
 const now = () => new Date().toISOString();
 const slug = (v) => String(v || "").toLowerCase().trim().replace(/\s+/g, " ");
 
@@ -174,58 +175,119 @@ function insertLead(d, lead, extra) {
   d.prepare(`INSERT INTO leads
     (id,product,cohort_id,pipeline_run_id,strategy_version,company,company_domain,name,title,linkedin_url,
      identity_key,identity_confidence,email_best,email_status,address_found_or_guessed,email_source_type,email_source_url,
-     deliverability_status,recipient_jurisdiction,legal_basis,role_relevance_note,stage,needs_review,review_reasons,source_stores,research,created_at,updated_at)
+     deliverability_status,deliverability_checked_at,recipient_jurisdiction,legal_basis,legal_basis_evidence,role_relevance_note,stage,needs_review,review_reasons,source_stores,research,created_at,updated_at)
     VALUES (@id,@product,@cohort_id,@pipeline_run_id,@strategy_version,@company,@company_domain,@name,@title,@linkedin_url,
      @identity_key,@identity_confidence,@email_best,@email_status,@address_found_or_guessed,@email_source_type,@email_source_url,
-     'unchecked',@recipient_jurisdiction,NULL,@role,'target',@needs_review,'[]',@source_stores,@research,@t,@t)`).run({
+     @deliverability_status,@deliverability_checked_at,@recipient_jurisdiction,@legal_basis,@legal_basis_evidence,@role,'target',@needs_review,'[]',@source_stores,@research,@t,@t)`).run({
     id, product: normalizeProduct(lead.product), cohort_id: extra.cohort_id, pipeline_run_id: extra.pipeline_run_id,
     strategy_version: extra.strategy_version, company: lead.company || null, company_domain: lead.company_domain || null,
     name: lead.name || null, title: lead.title || null,
     linkedin_url: /linkedin\.com\/in\//i.test(lead.linkedin_or_source || "") ? lead.linkedin_or_source : null,
     identity_key: ident.key, identity_confidence: ident.confidence, email_best: lead.email_best || null,
     email_status: lead.email_status || "unknown",
-    address_found_or_guessed: lead.email_best ? (lead.verified ? "verified" : "guessed") : null,
-    email_source_type: lead.email_best ? (lead.verified ? "verified" : "guessed_pattern") : null,
-    email_source_url: lead.source_url || null, recipient_jurisdiction: extra.jurisdiction,
+    address_found_or_guessed: lead.address_found_or_guessed || (lead.email_best ? (lead.verified ? "verified" : "guessed") : null),
+    email_source_type: lead.email_source_type || (lead.email_best ? (lead.verified ? "verified" : "guessed_pattern") : null),
+    email_source_url: lead.email_source_url || lead.source_url || null,
+    deliverability_status: lead.deliverability_status || "unchecked",
+    deliverability_checked_at: lead.deliverability_checked_at || null,
+    recipient_jurisdiction: lead.recipient_jurisdiction || extra.jurisdiction,
+    legal_basis: lead.legal_basis || null,
+    legal_basis_evidence: lead.legal_basis_evidence
+      ? (typeof lead.legal_basis_evidence === "string" ? lead.legal_basis_evidence : JSON.stringify(lead.legal_basis_evidence))
+      : null,
     role: lead.why_this_person || null, needs_review: extra.needs_review ? 1 : 0,
     source_stores: JSON.stringify([extra.source_store || "ingest"]), research: JSON.stringify(research), t,
   });
+  if (extra.play_id) d.prepare("UPDATE leads SET play_id=? WHERE id=?").run(extra.play_id, id);
   return id;
 }
 
 // Ingest/enrichment: strong-identity match updates in place; otherwise inserts a
 // new lead (weak matches are NOT auto-merged — flagged for review). Lineage is
-// always non-null (defaults to an 'inbound-unassigned' cohort).
-export async function upsertLeads(incoming = [], product = "gnk") {
+// always non-null and product/strategy specific. New cohorts remain draft until
+// an operator approves one exact sales play and its targeting rules.
+export async function upsertLeads(incoming = [], product = "gnk", options = {}) {
   const d = db();
   const p = normalizeProduct(product);
-  const cohort_id = "inbound-unassigned";
-  d.prepare("INSERT OR IGNORE INTO cohorts(cohort_id,product,strategy_version,created_at,note) VALUES(?,?,?,?,?)")
-    .run(cohort_id, p, DEFAULT_STRATEGY, now(), "leads ingested without an assigned cohort");
-  let added = 0, updated = 0;
-  tx((database) => {
-    for (const raw of incoming) {
-      const lead = { ...raw, product: p };
-      const ident = identity({ ...lead, id: lead.id || "x" });
-      const jur = jurisdictionFor(lead, p);
-      let match = null;
-      if (ident.confidence === "strong")
-        match = database.prepare("SELECT id FROM leads WHERE identity_key=? AND product=?").get(ident.key, p);
-      if (match) {
-        const cur = getLead(database, match.id);
-        const research = { ...(cur.research || {}) };
-        for (const f of MERGEABLE) if (lead[f] != null && lead[f] !== "") research[f] = lead[f];
-        database.prepare("UPDATE leads SET email_best=COALESCE(NULLIF(@email,''),email_best), email_status=@status, research=@research, updated_at=@t WHERE id=@id")
-          .run({ email: lead.email_best || "", status: lead.email_status || cur.email_status, research: JSON.stringify(research), t: now(), id: match.id });
-        updated++;
-      } else {
-        const needs_review = ident.confidence === "weak";
-        insertLead(database, lead, { cohort_id, pipeline_run_id: `ingest-${today()}`, strategy_version: DEFAULT_STRATEGY, jurisdiction: jur, needs_review, source_store: "ingest" });
-        added++;
-      }
-    }
+  const lineage = createPipelineLineage(d, {
+    product: p,
+    play_id: options.play_id || null,
+    cohort_id: options.cohort_id || null,
+    pipeline_run_id: options.pipeline_run_id || null,
+    strategy_version: options.strategy_version || STRATEGY_VERSION,
+    stage: options.stage || "ingest",
+    note: options.note || `${p} leads awaiting cohort approval`,
+    metadata: { incoming_count: incoming.length, source_store: options.source_store || "ingest" },
   });
-  return { added, updated, total: d.prepare("SELECT COUNT(*) n FROM leads WHERE product=?").get(p).n };
+  let added = 0, updated = 0;
+  try {
+    tx((database) => {
+      for (const raw of incoming) {
+        const lead = { ...raw, product: p };
+        const ident = identity({ ...lead, id: lead.id || "x" });
+        const jur = jurisdictionFor(lead, p);
+        let match = null;
+        if (ident.confidence === "strong")
+          match = database.prepare("SELECT id FROM leads WHERE identity_key=? AND product=?").get(ident.key, p);
+        if (match) {
+          const cur = getLead(database, match.id);
+          const research = { ...(cur.research || {}) };
+          for (const f of MERGEABLE) if (lead[f] != null && lead[f] !== "") research[f] = lead[f];
+          applyCanonicalEmailPatch(database, cur, lead);
+          database.prepare("UPDATE leads SET research=@research, updated_at=@t WHERE id=@id")
+            .run({ research: JSON.stringify(research), t: now(), id: match.id });
+          updated++;
+        } else {
+          const needs_review = ident.confidence === "weak" || !lineage.play_id;
+          insertLead(database, lead, { ...lineage, jurisdiction: jur, needs_review, source_store: options.source_store || "ingest" });
+          added++;
+        }
+      }
+    });
+    completePipelineRun(d, lineage.pipeline_run_id, "complete");
+  } catch (error) {
+    completePipelineRun(d, lineage.pipeline_run_id, "failed");
+    throw error;
+  }
+  return { added, updated, total: d.prepare("SELECT COUNT(*) n FROM leads WHERE product=?").get(p).n, ...lineage };
+}
+
+const CANONICAL_EMAIL_FIELDS = [
+  "email_best", "email_status", "address_found_or_guessed", "email_source_type", "email_source_url",
+  "deliverability_status", "deliverability_checked_at", "recipient_jurisdiction", "legal_basis",
+  "legal_basis_evidence", "role_relevance_note",
+];
+
+function applyCanonicalEmailPatch(database, current, patch) {
+  const values = {};
+  for (const field of CANONICAL_EMAIL_FIELDS) {
+    if (!(field in patch)) continue;
+    values[field] = field === "legal_basis_evidence" && typeof patch[field] !== "string"
+      ? JSON.stringify(patch[field])
+      : patch[field] || null;
+  }
+  if ("verified" in patch && !("address_found_or_guessed" in values)) {
+    values.address_found_or_guessed = patch.verified ? "verified" : (patch.email_best || current.email_best ? "guessed" : null);
+  }
+  if (patch.email_best && ["guessed", "inferred"].includes(patch.email_status) && !("address_found_or_guessed" in values)) {
+    values.address_found_or_guessed = "guessed";
+    if (!("email_source_type" in values)) values.email_source_type = patch.email_status === "inferred" ? "inferred_pattern" : "guessed_pattern";
+  }
+  if (patch.source_url && !("email_source_url" in values)) values.email_source_url = patch.source_url;
+  if (values.email_best && values.email_best !== current.email_best && !("deliverability_status" in values)) {
+    values.deliverability_status = "unchecked";
+    values.deliverability_checked_at = null;
+  }
+  const entries = Object.entries(values);
+  if (!entries.length) return;
+  const params = { id: current.id, t: now() };
+  const sets = entries.map(([field, value]) => { params[field] = value; return `${field}=@${field}`; });
+  const next = { ...current, ...values };
+  const ident = identity(next);
+  sets.push("identity_key=@identity_key", "identity_confidence=@identity_confidence", "updated_at=@t");
+  params.identity_key = ident.key;
+  params.identity_confidence = ident.confidence;
+  database.prepare(`UPDATE leads SET ${sets.join(", ")} WHERE id=@id`).run(params);
 }
 
 // Dashboard/CLI patch. Stage changes route through the gated model so the UI
@@ -235,6 +297,7 @@ export async function updateLead(id, patch = {}, product = "gnk") {
   const p = normalizeProduct(product);
   const cur = getLead(d, id);
   if (!cur) throw new Error(`Unknown lead: ${id}`);
+  if (cur.product !== p) throw new Error(`lead ${id} belongs to ${cur.product}, not ${p}`);
   const priorStage = CANON_TO_LEGACY[cur.stage];
 
   if (patch.stage && LEAD_STAGES.includes(patch.stage) && patch.stage !== priorStage) {
@@ -243,6 +306,7 @@ export async function updateLead(id, patch = {}, product = "gnk") {
   }
 
   const research = { ...(cur.research || {}) };
+  applyCanonicalEmailPatch(d, cur, patch);
   let touched = false;
   if (patch.contract_bucket && CONTRACT_BUCKETS.includes(patch.contract_bucket)) { research.contract_bucket = patch.contract_bucket; touched = true; }
   if (typeof patch.note === "string" && patch.note.trim()) {

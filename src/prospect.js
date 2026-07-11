@@ -5,6 +5,7 @@ import { ingestFromState } from "./ingest-leads.js";
 import { readLeads } from "./leads-store.js";
 import { findEmails } from "./find-emails.js";
 import { recommendedProspectPlan } from "./pipeline-capacity.js";
+import { STRATEGY_VERSION } from "./sales-plays.js";
 
 function normalizeProduct(value) {
   return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
@@ -20,6 +21,8 @@ const CONTEXT_AGENT_SUFFIXES = [
   "icp-contact-profile",
   "boutique-growth-playbook",
   "offer-map",
+  "industry-map",
+  "market-coverage",
   "revenue-strategy",
   "pipeline-capacity"
 ];
@@ -34,16 +37,19 @@ function runAgent(slug) {
 }
 
 async function refreshContext({ force, product }) {
-  const state = await readState();
+  let state = await readState();
+  if (force || state.artifacts?.["revenue-demand-radar"]?.strategy_version !== STRATEGY_VERSION) {
+    console.log("[prospect] context: revenue-demand-radar");
+    await runAgent("revenue-demand-radar");
+    state = await readState();
+  }
   for (const suffix of CONTEXT_AGENT_SUFFIXES) {
+    if (suffix === "market-coverage" && product !== "outagehub") continue;
     const slug = agentSlug(product, suffix);
-    if (force || suffix === "pipeline-capacity" || !state.artifacts?.[slug]) {
+    if (force || suffix === "pipeline-capacity" || state.artifacts?.[slug]?.strategy_version !== STRATEGY_VERSION) {
       console.log(`[prospect] context: ${slug}`);
-      try {
-        await runAgent(slug);
-      } catch (error) {
-        console.error(`[prospect] context ${slug} failed: ${error.message}`);
-      }
+      await runAgent(slug);
+      state = await readState();
     }
   }
 }
@@ -68,11 +74,7 @@ async function main() {
     for (const suffix of PROSPECT_AGENT_SUFFIXES) {
       const slug = agentSlug(product, suffix);
       console.log(`[prospect] run ${slug}`);
-      try {
-        await runAgent(slug);
-      } catch (error) {
-        console.error(`[prospect] ${slug} failed: ${error.message}`);
-      }
+      await runAgent(slug);
     }
 
     const result = await ingestFromState(product);

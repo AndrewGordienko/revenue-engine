@@ -10,9 +10,12 @@ This repo is a shared revenue-engine workspace for two deliberately different sa
 - `openclaw-workspaces/` contains repo-local OpenClaw workspaces for each agent.
 - `src/setup-openclaw.js` registers agents with OpenClaw.
 - `src/run-agent.js` runs an agent and publishes its output into the bus/state.
-- `src/pipeline-capacity.js` calculates standing lead inventory and daily outbound volume from revenue goals.
+- `src/pipeline-capacity.js` calculates brand-specific account, meeting, proposal, and win targets.
 - `src/reply-classifier.js` turns replies and objections into deterministic pipeline actions.
 - `src/pipeline-report.js` reports outcomes by product, cohort, and sales play.
+- `src/revenue-events.js` is the canonical sent/reply/meeting/outcome event path.
+- `src/outreach-queue.js` enforces cohort approval, message approval, provider drafts, and stop-on-reply.
+- `src/google-workspace.js` integrates Gmail drafts/thread sync and Google Calendar free/busy/events.
 - `src/dashboard-server.js` serves the dashboard and JSON APIs.
 - `NOTES.md` captures project operating notes, including the exact-target ICP doctrine for agent output quality.
 
@@ -45,6 +48,7 @@ npm run openai:status
 npm run dashboard
 npm run classify:reply -- "Yes, let's discuss this next week"
 npm run report:pipeline
+npm test
 ```
 
 The dashboard defaults to `http://127.0.0.1:8792/`.
@@ -56,6 +60,35 @@ GNK targets one signed $40k-$60k engagement in 30 days through warm introduction
 OutageHub targets $40k of booked first-month revenue through three to four paid pilots. Implementation is priced separately, every pilot proves one decision workflow for 30 days, and the close creates an annual conversion decision. Its five-touch sequence sells operational proof and implementation, not a generic map or low-price API.
 
 The shared Revenue Demand Radar watches hiring, leadership, funding, launches, incidents, migrations, deprecations, roadmaps, regulation, complaints, and partnerships, then assigns each signal to exactly one brand and sales play.
+
+## Revenue-loop controls
+
+The immutable CRM event log is the source of truth. Lead memory is a projection for agents and operators:
+
+```text
+provider event → CRM activity_event → reply classification → stage transition
+→ future-touch stop → lead-memory projection → pipeline report → next action
+```
+
+New cohorts begin in `draft`. A founder must approve one exact sales play and the cohort rules. Reviewed messages then enter `pending_approval`; each message requires separate approval before the system can create a Gmail draft. Automatic sending is deliberately disabled. After the human sends from Gmail, mailbox sync records the canonical sent event and immediately stops future touches when a reply, bounce, or unsubscribe arrives.
+
+The Approvals dashboard shows cohort rules, message approvals, provider drafts, and Google integration status. The Overview shows actual versus target for verified contacts, sends, replies, meetings, qualified opportunities, proposals, wins, revenue, MRR, and implementation margin.
+
+### Google Workspace
+
+Copy `.env.example` into your secret environment and provide either `GOOGLE_ACCESS_TOKEN` or the client ID, client secret, and refresh token. The OAuth grant needs Gmail compose/read access and Calendar free-busy/event access. Credentials are never stored in this repository.
+
+For a disposable visual fixture:
+
+```sh
+CRM_DB_PATH=/tmp/salesv3-fixture.db \
+LEAD_MEMORY_DIR=/tmp/salesv3-fixture-memory \
+ALLOW_FIXTURE_SEED=1 npm run fixture:dashboard
+
+CRM_DB_PATH=/tmp/salesv3-fixture.db \
+LEAD_MEMORY_DIR=/tmp/salesv3-fixture-memory \
+npm run dashboard
+```
 
 ## OpenClaw Skills
 

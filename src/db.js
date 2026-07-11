@@ -42,6 +42,19 @@ function migrate(d) {
     note             TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS pipeline_runs (
+    pipeline_run_id  TEXT PRIMARY KEY,
+    cohort_id        TEXT NOT NULL REFERENCES cohorts(cohort_id),
+    product          TEXT NOT NULL,
+    strategy_version TEXT NOT NULL,
+    stage             TEXT NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'running',
+    started_at        TEXT NOT NULL,
+    completed_at      TEXT,
+    metadata          TEXT
+  );
+  CREATE INDEX IF NOT EXISTS pipeline_runs_cohort ON pipeline_runs(cohort_id, started_at);
+
   CREATE TABLE IF NOT EXISTS leads (
     id                     TEXT PRIMARY KEY,
     product                TEXT NOT NULL,
@@ -174,6 +187,67 @@ function migrate(d) {
     scope          TEXT,
     created_at     TEXT NOT NULL
   );
+
+  -- Human-approved outbound queue. Nothing reaches a provider before approval;
+  -- replies atomically stop every future touch for the lead.
+  CREATE TABLE IF NOT EXISTS outreach_messages (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    lead_id             TEXT NOT NULL REFERENCES leads(id),
+    cohort_id           TEXT NOT NULL REFERENCES cohorts(cohort_id),
+    pipeline_run_id     TEXT NOT NULL,
+    strategy_version    TEXT NOT NULL,
+    message_type        TEXT NOT NULL DEFAULT 'sequence_touch',
+    touch_number        INTEGER,
+    recipient           TEXT NOT NULL,
+    subject             TEXT NOT NULL,
+    body                TEXT NOT NULL,
+    review_status       TEXT,
+    evidence            TEXT,
+    scheduled_at        TEXT,
+    status              TEXT NOT NULL DEFAULT 'pending_approval',
+    approved_at         TEXT,
+    approved_by         TEXT,
+    rejected_at         TEXT,
+    rejection_reason    TEXT,
+    provider            TEXT,
+    provider_draft_id   TEXT,
+    provider_message_id TEXT,
+    provider_thread_id  TEXT,
+    sent_at             TEXT,
+    stopped_at          TEXT,
+    stopped_reason      TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL,
+    UNIQUE(lead_id, message_type, touch_number)
+  );
+  CREATE INDEX IF NOT EXISTS outreach_status ON outreach_messages(status, scheduled_at);
+  CREATE INDEX IF NOT EXISTS outreach_lead ON outreach_messages(lead_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS meetings (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    lead_id           TEXT NOT NULL REFERENCES leads(id),
+    opportunity_id    INTEGER REFERENCES opportunities(id),
+    status            TEXT NOT NULL DEFAULT 'proposed',
+    starts_at         TEXT NOT NULL,
+    ends_at           TEXT NOT NULL,
+    timezone          TEXT NOT NULL,
+    attendees         TEXT NOT NULL,
+    provider          TEXT,
+    provider_event_id TEXT,
+    conference_url    TEXT,
+    brief             TEXT,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS meetings_lead ON meetings(lead_id, starts_at);
+
+  CREATE TABLE IF NOT EXISTS provider_sync_state (
+    provider   TEXT NOT NULL,
+    key        TEXT NOT NULL,
+    value      TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(provider, key)
+  );
   `);
 
   // Additive columns on leads for play attachment + within-play scoring.
@@ -185,6 +259,14 @@ function migrate(d) {
   addColumn(d, "contracts", "status", "TEXT DEFAULT 'active'");
   addColumn(d, "contracts", "parent_contract_id", "INTEGER");
   addColumn(d, "contracts", "ended_at", "TEXT");
+  addColumn(d, "cohorts", "play_id", "TEXT");
+  addColumn(d, "cohorts", "status", "TEXT DEFAULT 'draft'");
+  addColumn(d, "cohorts", "rules", "TEXT");
+  addColumn(d, "cohorts", "approved_at", "TEXT");
+  addColumn(d, "cohorts", "approved_by", "TEXT");
+  addColumn(d, "outreach_messages", "review_status", "TEXT");
+  addColumn(d, "outreach_messages", "evidence", "TEXT");
+  addColumn(d, "meetings", "brief", "TEXT");
   const v = d.prepare("SELECT value FROM meta WHERE key='schema_version'").get();
   if (!v) d.prepare("INSERT INTO meta(key,value) VALUES('schema_version','1')").run();
 }

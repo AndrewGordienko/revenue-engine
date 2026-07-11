@@ -1051,6 +1051,29 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .graph-tip { display: flex; flex-direction: column; gap: 2px; padding: 6px 9px; border-radius: 8px; background: #fff; border: 1px solid var(--line-2); color: var(--ink); font-size: 0.8rem; box-shadow: var(--shadow-2); }
 .graph-tip span { color: var(--muted); font-size: 0.7rem; }
+/* ---------- approvals + integrations ---------- */
+.integration-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0 24px; }
+.integration-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.integration-card.ready { border-color: #b7dfc3; background: var(--green-soft); }
+.integration-card.blocked { border-color: #efcfca; background: #fff8f6; }
+.integration-card span, .integration-card small { color: var(--ink-2); }
+.approval-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.approval-card, .approval-message { padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
+.approval-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.approval-list { display: flex; flex-direction: column; gap: 10px; }
+.approval-message.status-stopped { border-left: 4px solid var(--amber); }
+.approval-message.status-approved, .approval-message.status-provider_draft { border-left: 4px solid var(--green); }
+.message-subject { margin-top: 10px; font-weight: 600; color: var(--ink); }
+.message-preview { margin-top: 5px; color: var(--ink-2); line-height: 1.45; white-space: pre-wrap; }
+.approval-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.small-copy { color: var(--ink-2); font-size: 0.82rem; line-height: 1.4; margin: 8px 0; }
+.meeting-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.meeting-controls > div { margin-right: auto; }
+.meeting-controls p { margin-top: 2px; }
+.call-brief { flex: 1 0 100%; margin-top: 6px; padding: 12px; border-top: 1px solid var(--line); }
+.call-brief p, .call-brief li { color: var(--ink-2); font-size: 0.84rem; line-height: 1.45; }
+.call-brief ul { margin: 8px 0 0 18px; }
+@media (max-width: 720px) { .integration-strip { grid-template-columns: 1fr; } }
 /* ---------- lead memory panel ---------- */
 .memory-block { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
 .memory-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }

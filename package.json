@@ -49,6 +49,7 @@
     "audit:contacts": "node src/audit-contact-targets.js",
     "classify:reply": "node src/reply-classifier.js",
     "report:pipeline": "node src/pipeline-report.js",
+    "fixture:dashboard": "node scripts/seed-dashboard-fixture.mjs",
     "dedupe:leads": "node src/dedupe-leads.js",
     "pipeline:gnk": "node src/run-sequence.js",
     "pipeline:ohub": "node src/run-sequence.js outagehub",
@@ -63,9 +64,11 @@
     "start": "node src/dashboard-server.js",
     "crm:build": "node src/migrate-to-sqlite.js",
     "crm:wire": "node src/wire-plan.js",
-    "crm:test": "node --test src/crm.test.js"
+    "crm:test": "node --test src/crm.test.js",
+    "revenue:test": "node --test src/revenue-loop.test.js",
+    "test": "node --test src/crm.test.js src/revenue-loop.test.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5.0"
   }
 }

@@ -39,18 +39,19 @@ export const STAGE_REQUIRES_EVENT = {
 // the opportunity record.
 export const EVENT_TYPES = [
   "sent", "delivered", "bounced", "reply", "meeting",
-  "unsubscribe", "contact_evidence_missing", "note",
+  "unsubscribe", "contact_evidence_missing", "note", "outcome",
 ];
 
 const EVENT_RULES = {
   sent: { from: ["route_ready", "contact_evidence_missing"], to: "enrolled", needsEligibility: true },
   delivered: { requiresPrior: "sent", to: null },
   bounced: { requiresPrior: "sent", to: null, sideEffect: "bounce" },
-  reply: { from: ["enrolled"], requiresPrior: "sent", to: "engaged" },
+  reply: { from: ["enrolled", "engaged"], requiresPrior: "sent", to: "engaged" },
   meeting: { from: ["engaged"], to: null },
   unsubscribe: { requiresPrior: "sent", to: null, sideEffect: "unsubscribe" },
   contact_evidence_missing: { from: ["target", "route_ready", "contact_evidence_missing"], to: "contact_evidence_missing", sideEffect: "evidence_missing" },
   note: { to: null },
+  outcome: { to: null },
 };
 
 // ---- Legal bases & required evidence (CASL/PECR-shaped) ---------------------
@@ -133,10 +134,10 @@ export function routeReady(d, lead) {
 
 // send_ready: route_ready + working sender/unsubscribe infra + no duplicate
 // active enrollment. This is the gate on the actual moment of first contact.
-export function sendEligibility(d, lead) {
+export function sendEligibility(d, lead, { allow_active_sequence = false } = {}) {
   const b = [...routeReady(d, lead).blocked];
   if (!senderUnsubscribeReady()) b.push("sender_unsubscribe_infra_missing");
-  if (hasUnresolvedContact(d, lead.id)) b.push("unresolved_prior_contact");
+  if (!allow_active_sequence && hasUnresolvedContact(d, lead.id)) b.push("unresolved_prior_contact");
   return { ok: b.length === 0, blocked: b };
 }
 
@@ -172,7 +173,7 @@ export function recordEvent(d, leadId, type, { occurred_at, source = "dashboard"
 
   // Manual/reconciled sends record a send that already happened out-of-band, so
   // they bypass both the route_ready 'from' precondition and the eligibility gate.
-  const MANUAL_SEND_SOURCES = new Set(["mailbox-sync", "migration", "dashboard-manual"]);
+  const MANUAL_SEND_SOURCES = new Set(["mailbox-sync", "gmail-sync", "provider-sync", "migration", "dashboard-manual"]);
   const isManualSend = type === "sent" && MANUAL_SEND_SOURCES.has(source);
   const priors = priorEventTypes(d, leadId);
   if (rule.requiresPrior && !priors.includes(rule.requiresPrior))
@@ -210,6 +211,16 @@ function applySideEffects(db, lead, type, rule, payload) {
     addSuppression(db, lead.email_best, "unsubscribe");
   } else if (rule.sideEffect === "evidence_missing") {
     db.prepare("UPDATE leads SET suppressed=1, updated_at=? WHERE id=?").run(t, lead.id);
+  }
+  if (["reply", "bounced", "unsubscribe"].includes(type)) {
+    db.prepare(`UPDATE outreach_messages
+      SET status='stopped', stopped_at=?, stopped_reason=?, updated_at=?
+      WHERE lead_id=? AND status IN ('pending_approval','approved','queued','provider_draft')`)
+      .run(t, type, t, lead.id);
+  }
+  if (type === "reply" && payload?.classification?.intent === "unsubscribe") {
+    db.prepare("UPDATE leads SET unsubscribed_at=?, suppressed=1, updated_at=? WHERE id=?").run(t, t, lead.id);
+    addSuppression(db, lead.email_best, "unsubscribe");
   }
 }
 
@@ -288,7 +299,7 @@ export function identity(row) {
   const domain = slug(row.company_domain);
   const li = linkedinSlug(row.linkedin_url || row.linkedin_or_source);
   if (domain && li) return { key: `d:${domain}|li:${li}`, confidence: "strong" };
-  if (domain && row.email_best && row.verified) return { key: `d:${domain}|e:${row.email_best.toLowerCase()}`, confidence: "strong" };
+  if (domain && row.email_best && (row.verified || row.address_found_or_guessed === "verified")) return { key: `d:${domain}|e:${row.email_best.toLowerCase()}`, confidence: "strong" };
   if (domain && row.name) return { key: `d:${domain}|n:${slug(row.name)}`, confidence: "weak" };
   return { key: `id:${row.id}`, confidence: "weak" };
 }

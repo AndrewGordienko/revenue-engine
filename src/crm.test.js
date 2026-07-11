@@ -22,6 +22,7 @@ const { PLAYS_BY_ID, PLAYS_BY_BRAND, SEQUENCE_POLICIES, STRATEGY_VERSION } = awa
 const { classifyReply } = await import("./reply-classifier.js");
 const { buildPipelineReport } = await import("./pipeline-report.js");
 const { calculatePipelineCapacity } = await import("./pipeline-capacity.js");
+const { dependenciesRequiringRefresh, validateArtifactContract } = await import("./run-agent.js");
 
 const nowIso = () => new Date().toISOString();
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
@@ -196,6 +197,22 @@ test("reply classifier captures positive intent and objections", () => {
   const budget = classifyReply("This is interesting but we do not have budget until next quarter");
   assert.ok(budget.objections.includes("budget"));
   assert.ok(budget.objections.includes("timing"));
+});
+
+test("agent runtime schema fails closed on missing output fields", () => {
+  const agent = { slug: "test-agent", outputs: ["decision", "source_notes"] };
+  assert.throws(() => validateArtifactContract(agent, { source_notes: [] }), /missing: decision/);
+  assert.throws(() => validateArtifactContract(agent, { decision: "x", source_notes: "bad" }), /must be an array/);
+  assert.equal(validateArtifactContract(agent, { decision: "x", source_notes: [] }).decision, "x");
+});
+
+test("agent dependencies fail closed when missing or stale", () => {
+  const blocked = dependenciesRequiringRefresh([
+    { slug: "missing", present: false, current: false },
+    { slug: "stale", present: true, current: false },
+    { slug: "ready", present: true, current: true },
+  ]);
+  assert.deepEqual(blocked.map((item) => item.slug), ["missing", "stale"]);
 });
 
 test("cohort report tracks funnel, booked revenue, and implementation margin", () => {

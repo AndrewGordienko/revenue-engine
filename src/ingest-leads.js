@@ -138,6 +138,12 @@ export function extractLeads(state, productPrefix = "gnk") {
   const leads = [];
   const slug = (suffix) => `${productPrefix}-${suffix}`;
   const personContext = buildPersonContextIndex(artifacts, productPrefix);
+  const playByCompany = new Map(
+    (artifacts[slug("account-sourcing")]?.target_accounts || [])
+      .filter((account) => account.company && account.play_id)
+      .map((account) => [String(account.company).toLowerCase().trim(), account.play_id])
+  );
+  const playFor = (company, explicit = null) => explicit || playByCompany.get(String(company || "").toLowerCase().trim()) || null;
 
   // 1. Named contacts from contact discovery (richest source).
   for (const map of artifacts[slug("contact-discovery")]?.account_contact_maps || []) {
@@ -147,6 +153,7 @@ export function extractLeads(state, productPrefix = "gnk") {
       const email = info.official_public_email || "";
       const context = personContext.get(personKey(map.company, person.name)) || {};
       leads.push({
+        play_id: playFor(map.company, map.play_id),
         name: person.name,
         title: person.current_title,
         company: map.company,
@@ -180,6 +187,7 @@ export function extractLeads(state, productPrefix = "gnk") {
       const email = info.official_public_email || "";
       const context = personContext.get(personKey(dossier.company, person.name)) || {};
       leads.push({
+        play_id: playFor(dossier.company, dossier.play_id),
         name: person.name,
         title: person.current_title,
         company: dossier.company,
@@ -209,6 +217,7 @@ export function extractLeads(state, productPrefix = "gnk") {
     const { name, title } = splitNameTitle(account.reachable_path?.likely_buyer_or_router);
     if (!looksLikeNamedPerson(name)) continue;
     leads.push({
+      play_id: playFor(account.company, account.play_id),
       name,
       title,
       company: account.company,
@@ -239,6 +248,7 @@ export function extractLeads(state, productPrefix = "gnk") {
   for (const person of artifacts[slug("lead-persona-profile")]?.person_personas || []) {
     if (!person.person_name || !person.company) continue;
     leads.push({
+      play_id: playFor(person.company, person.play_id),
       name: person.person_name,
       title: person.current_title || "",
       company: person.company,
@@ -274,7 +284,26 @@ export function isPowerCompany(company) {
 export async function ingestFromState(productPrefix = process.argv[2] || "gnk") {
   const state = await readState();
   const leads = extractLeads(state, productPrefix);
-  return upsertLeads(leads, productPrefix);
+  const groups = new Map();
+  for (const lead of leads) {
+    const key = lead.play_id || "triage";
+    (groups.get(key) || groups.set(key, []).get(key)).push(lead);
+  }
+  const runs = [];
+  for (const [play, group] of groups) {
+    runs.push(await upsertLeads(group, productPrefix, {
+      play_id: play === "triage" ? null : play,
+      stage: "artifact-ingest",
+      source_store: "agent-artifacts",
+      note: `${productPrefix} ${play} artifact cohort`,
+    }));
+  }
+  return {
+    added: runs.reduce((sum, run) => sum + run.added, 0),
+    updated: runs.reduce((sum, run) => sum + run.updated, 0),
+    total: runs.at(-1)?.total || 0,
+    runs,
+  };
 }
 
 // CLI entry
