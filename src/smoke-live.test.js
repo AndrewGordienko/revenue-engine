@@ -43,11 +43,23 @@ test("manifest validation enforces 3-per-brand, one-per-play, domain + buyer", (
   assert.ok(r.problems.some((p) => /expected exactly 3 accounts/.test(p)));
 });
 
-test("lead:prepare fails closed in live-smoke mode without a cohort", () => {
-  assert.throws(() => requireCohortForLiveSmoke("lead:prepare", null, true), /requires --cohort/);
-  assert.doesNotThrow(() => requireCohortForLiveSmoke("lead:prepare", "gnk-live-smoke", true));
-  assert.doesNotThrow(() => requireCohortForLiveSmoke("lead:prepare", null, false)); // not live → allowed
-  assert.doesNotThrow(() => requireCohortForLiveSmoke("cohort:build", null, true)); // cohort:build not gated
+test("an invalid raw product value is rejected, not silently coerced to GNK", () => {
+  const bad = [
+    { product: "something-wrong", play_id: "GNK-AI-01", company: "X", domain: "x.example", buyer: "Xander" },
+    ...VALID.slice(1),
+  ];
+  const r = validateManifest(bad);
+  assert.equal(r.ok, false);
+  assert.ok(r.problems.some((p) => /invalid product something-wrong/.test(p)), "raw product must be rejected");
+});
+
+test("every cohort-scoped pipeline fails closed in live-smoke mode without a cohort", () => {
+  for (const pipeline of ["cohort:build", "lead:prepare", "full"]) {
+    assert.throws(() => requireCohortForLiveSmoke(pipeline, null, true), /requires --cohort/, `${pipeline} must be gated`);
+    assert.doesNotThrow(() => requireCohortForLiveSmoke(pipeline, "gnk-live-smoke", true));
+    assert.doesNotThrow(() => requireCohortForLiveSmoke(pipeline, null, false)); // not live → allowed
+  }
+  assert.doesNotThrow(() => requireCohortForLiveSmoke("strategy:refresh", null, true)); // strategy is not cohort-scoped
 });
 
 test("init seeds only manifest accounts into isolated cohort groups", async () => {

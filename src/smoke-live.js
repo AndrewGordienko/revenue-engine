@@ -14,7 +14,12 @@ export const ACTIVE_PLAYS = {
   outagehub: ["OHUB-ISP-01", "OHUB-EMBED-01", "OHUB-FAC-01"],
 };
 
+// Accepted RAW product values in a manifest. Anything else is rejected outright
+// (never silently coerced to a brand).
+const RAW_PRODUCTS = new Set(["gnk", "outagehub", "ohub"]);
 const normalizeProduct = (p) => (p === "ohub" || p === "outagehub" ? "outagehub" : "gnk");
+// Brand of a RAW product value, or null when the value is not a valid product.
+const brandOf = (raw) => (raw === "gnk" ? "gnk" : raw === "outagehub" || raw === "ohub" ? "outagehub" : null);
 
 export function cohortGroupFor(product) {
   return `${normalizeProduct(product)}-live-smoke`;
@@ -42,13 +47,14 @@ export function validateManifest(accounts) {
     if (!a.company) problems.push(`${where}: missing company`);
     if (!a.domain) problems.push(`${where}: missing company domain`);
     if (!a.buyer) problems.push(`${where}: missing proposed buyer`);
-    const product = normalizeProduct(a.product);
-    if (!ACTIVE_PLAYS[product]) problems.push(`${where}: invalid product ${a.product}`);
-    else if (!ACTIVE_PLAYS[product].includes(a.play_id)) problems.push(`${where}: play ${a.play_id} is not an active ${product} play`);
+    // Reject the RAW product value first — never coerce an unknown value to a brand.
+    const brand = brandOf(a.product);
+    if (!RAW_PRODUCTS.has(a.product) || !brand) problems.push(`${where}: invalid product ${a.product} (use gnk | outagehub | ohub)`);
+    else if (!ACTIVE_PLAYS[brand].includes(a.play_id)) problems.push(`${where}: play ${a.play_id} is not an active ${brand} play`);
     if (a.domain) { if (domains.has(a.domain)) problems.push(`${where}: duplicate domain ${a.domain}`); domains.add(a.domain); }
   }
   for (const [product, plays] of Object.entries(ACTIVE_PLAYS)) {
-    const forBrand = accounts.filter((a) => normalizeProduct(a.product) === product);
+    const forBrand = accounts.filter((a) => brandOf(a.product) === product);
     if (forBrand.length !== 3) problems.push(`${product}: expected exactly 3 accounts, got ${forBrand.length}`);
     for (const play of plays) {
       const n = forBrand.filter((a) => a.play_id === play).length;
@@ -60,8 +66,9 @@ export function validateManifest(accounts) {
 
 // Fail-closed guard. In live-smoke mode, a cohort-scoped pipeline (lead:prepare)
 // must be given an explicit --cohort, or it would run over the whole shared CRM.
+const COHORT_SCOPED_PIPELINES = new Set(["cohort:build", "lead:prepare", "full"]);
 export function requireCohortForLiveSmoke(pipeline, cohort, liveMode) {
-  if (liveMode && (pipeline === "lead:prepare" || pipeline === "full") && !cohort) {
+  if (liveMode && COHORT_SCOPED_PIPELINES.has(pipeline) && !cohort) {
     throw new Error(`live-smoke mode: ${pipeline} requires --cohort <id> (e.g. --cohort gnk-live-smoke) so it only touches the manifest accounts`);
   }
 }
