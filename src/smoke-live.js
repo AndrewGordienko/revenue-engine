@@ -77,9 +77,41 @@ export function isLiveSmokeMode(env = process.env) {
   return env.LIVE_SMOKE === "1" || fs.existsSync(manifestPath());
 }
 
+// Self-heal: a live-smoke cohort group may still hold leads from a SUPERSEDED
+// manifest (e.g. an account that was reassigned to another play or dropped). Those
+// stale leads would leak into the scoped run and trip assertManifestScope. Retire
+// them by moving them OUT of the live-smoke namespace into a 'retired-' cohort —
+// never deleted, never touching non-live-smoke (e.g. legacy-import) leads. Returns
+// what was retired so the orchestrator can report it.
+export function retireStaleLiveSmoke(database, accounts) {
+  const now = () => new Date().toISOString();
+  const allowedByGroup = new Map();
+  for (const a of accounts) {
+    const group = cohortGroupFor(a.product);
+    if (!allowedByGroup.has(group)) allowedByGroup.set(group, new Set());
+    allowedByGroup.get(group).add(a.domain);
+  }
+  const retired = [];
+  for (const [group, allowed] of allowedByGroup) {
+    const rows = database.prepare("SELECT id, company_domain, cohort_id FROM leads WHERE cohort_id LIKE ?").all(`${group}%`);
+    for (const row of rows) {
+      if (allowed.has(row.company_domain) || row.cohort_id.startsWith("retired-")) continue;
+      const retiredCohort = `retired-${row.cohort_id}`;
+      database.prepare(`INSERT OR IGNORE INTO cohorts(cohort_id,product,strategy_version,play_id,status,created_at,note)
+        SELECT ?,product,strategy_version,play_id,'retired',?, 'retired stale live-smoke lead (not in current manifest)' FROM cohorts WHERE cohort_id=?`)
+        .run(retiredCohort, now(), row.cohort_id);
+      database.prepare("UPDATE leads SET cohort_id=?, updated_at=? WHERE id=?").run(retiredCohort, now(), row.id);
+      retired.push({ domain: row.company_domain, from: row.cohort_id, to: retiredCohort });
+    }
+  }
+  return retired;
+}
+
 export async function initLiveSmoke(accounts, database = db()) {
   const { ok, problems } = validateManifest(accounts);
   if (!ok) throw new Error(`invalid live-smoke manifest:\n- ${problems.join("\n- ")}`);
+  // Reconcile the live-smoke namespace to exactly the current manifest first.
+  const retired = retireStaleLiveSmoke(database, accounts);
   const seeded = [];
   for (const account of accounts) {
     const product = normalizeProduct(account.product);
@@ -93,7 +125,7 @@ export async function initLiveSmoke(accounts, database = db()) {
     }], product, { cohort_id: cohortId, play_id: account.play_id, strategy_version: STRATEGY_VERSION, stage: "live-smoke", note: `live-smoke ${account.play_id}` });
     seeded.push({ company: account.company, domain: account.domain, product, play_id: account.play_id, cohort_id: cohortId });
   }
-  return { seeded, groups: [...new Set(seeded.map((s) => cohortGroupFor(s.product)))] };
+  return { seeded, retired, groups: [...new Set(seeded.map((s) => cohortGroupFor(s.product)))] };
 }
 
 // A live-smoke cohort group must contain ONLY manifest accounts — no pre-existing

@@ -187,12 +187,13 @@ export async function runSmokeLive({ database = db(), manifest = loadManifest(),
   } else {
     stage("init", { status: "running", started_at: now() });
     try {
-      const { groups } = await initLiveSmoke(manifest, database);
+      const { groups, retired } = await initLiveSmoke(manifest, database);
       for (const group of groups) {
         const scope = assertManifestScope(database, group, manifest);
         if (!scope.ok) throw new Error(`cohort group ${group} contains non-manifest leads: ${scope.leaked.join(", ")}`);
       }
-      stage("init", { status: "ok", detail: `seeded ${groups.length} cohort groups`, ended_at: now() });
+      const retiredNote = retired?.length ? ` · retired ${retired.length} stale (${retired.map((r) => r.domain).join(", ")})` : "";
+      stage("init", { status: "ok", detail: `seeded ${groups.length} cohort groups${retiredNote}`, retired: retired || [], ended_at: now() });
     } catch (error) {
       status.blockers.push({ type: "init", human: "operator", detail: error.message });
       stage("init", { status: "blocked", error: error.message, ended_at: now() });
