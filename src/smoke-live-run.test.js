@@ -9,6 +9,7 @@ import path from "node:path";
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "smokelive-"));
 process.env.CRM_DB_PATH = path.join(temp, "smokelive.db");
 process.env.LEAD_MEMORY_DIR = path.join(temp, "memory");
+process.env.SMOKE_LIVE_STATUS_PATH = path.join(temp, "smoke-live-status.json");
 process.env.SENDER_UNSUBSCRIBE_READY = "1";
 process.env.REVENUE_EVENT_SKIP_ONTOLOGY = "1";
 process.env.SMOKE_LIVE_SKIP_CRED_CHECK = "1"; // don't call openclaw in unit tests

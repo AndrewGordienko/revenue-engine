@@ -39,30 +39,30 @@ ever touches those six accounts, and **it stops at the approval queue** — Gmai
 draft creation is a separate manual action per message after you read it, and
 there is no send path at all.
 
+Run it from **Run** in the dashboard. That action and the OpenClaw Revenue
+Controller invoke the same resumable canonical orchestrator. It validates the
+manifest and plays, checks credentials, initializes the isolated cohorts,
+freshens strategy, runs both full brand pipelines, ingests/promotes the results,
+and writes the final loop report.
+
+The debugging fallback is a single command:
+
 ```sh
-# 1. Author the manifest: exactly 3 GNK + 3 OutageHub, one per active play,
-#    each with a company domain and proposed buyer. Start from the template:
-cp data/inputs/live-smoke-accounts.example.json data/inputs/live-smoke-accounts.json
-$EDITOR data/inputs/live-smoke-accounts.json
-
-# 2. Validate + seed the isolated cohort groups (gnk-live-smoke / outagehub-live-smoke).
-#    Fails if the manifest is off or any non-manifest lead would leak in.
-npm run smoke:live:init -- --manifest data/inputs/live-smoke-accounts.json
-
-# 3. Refresh strategy once (freshness-aware; skips fresh artifacts)
-npm run strategy:refresh -- gnk
-npm run strategy:refresh -- outagehub
-
-# 4. Build each cohort, SCOPED to the manifest group
-npm run pipeline -- cohort:build gnk --cohort gnk-live-smoke
-npm run pipeline -- cohort:build outagehub --cohort outagehub-live-smoke
-
-# 5. Approve each cohort in the dashboard Approvals view, then prepare leads
-#    (Commercial Dossier -> unified writer -> reviewer). In live-smoke mode
-#    lead:prepare FAILS CLOSED unless a --cohort is given.
-npm run pipeline -- lead:prepare gnk --cohort gnk-live-smoke
-npm run pipeline -- lead:prepare outagehub --cohort outagehub-live-smoke
+npm run smoke:live
 ```
+
+To install the weekday OpenClaw controller (it only researches, verifies,
+prepares, and queues; approval and sending remain human-only):
+
+```sh
+npm run controller:install
+```
+
+Pass `-- --disabled` only when you intentionally want to install it without the
+weekday schedule. The controller is intentionally draft-only. It never approves a cohort or
+message, creates no send route, and stops at `pending_approval`. A restart
+resumes safely and skips completed stages; conflicts are written to the Run
+dashboard for human resolution.
 
 Presence of `data/inputs/live-smoke-accounts.json` (or `LIVE_SMOKE=1`) turns on
 live-smoke mode. The `--cohort` scope limits each agent's lead context to the
@@ -71,7 +71,8 @@ hard-scoped because the live cohort group contains only manifest leads.
 
 Then inspect, in the dashboard:
 
-- **Agents** view — every lead-tier agent current, schema-valid, unblocked.
+- **Run** view — preflight/credential readiness, cohort stage, active agent,
+  elapsed time, completed accounts, conflicts, retry/resume, and final report.
 - **Approvals** view — the reviewed sequences sitting in `pending_approval`.
 - For each lead, read the Commercial Dossier, the full 4/5-touch sequence, and the
   reviewer's readiness + score before approving anything.

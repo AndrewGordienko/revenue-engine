@@ -16,7 +16,7 @@ import { GmailProvider, GoogleCalendarProvider, googleWorkspaceStatus } from "./
 import { OUTBOUND_SENDING_SUPPORTED } from "./outbound-guard.js";
 import { buildAgentHealth } from "./agent-health.js";
 import { bookMeeting, buildCallBrief, listMeetings, proposeMeetingTimes } from "./meetings.js";
-import { preflight as smokeLivePreflight, readSmokeStatus } from "./smoke-live-run.js";
+import { preflight as smokeLivePreflight, readSmokeStatus, isSmokeRunActive } from "./smoke-live-run.js";
 
 const preferredPort = Number(process.env.PORT || 8792);
 const maxPort = preferredPort + 20;
@@ -204,11 +204,11 @@ async function smokeLiveState() {
   const status = readSmokeStatus();
   let preflight = null;
   try { preflight = await smokeLivePreflight(); } catch (error) { preflight = { ok: false, error: error.message }; }
-  const running = Boolean(smokeLiveChild) || Boolean(status?.active);
+  const running = Boolean(smokeLiveChild) || isSmokeRunActive(status);
   return { running, preflight, status };
 }
 function startSmokeLive(response) {
-  if (smokeLiveChild || readSmokeStatus()?.active) {
+  if (smokeLiveChild || isSmokeRunActive(readSmokeStatus())) {
     sendJson(response, 409, { ok: false, error: "A live-smoke run is already active." });
     return;
   }

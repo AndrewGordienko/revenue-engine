@@ -47,6 +47,15 @@ function flagValue(name) {
   return i >= 0 ? process.argv[i + 1] : null;
 }
 
+function completedSince(state, slug, timestamp) {
+  if (!timestamp) return false;
+  const agent = state.agents?.[slug] || Object.values(state.agents || {}).find((entry) => entry.slug === slug);
+  const finished = Date.parse(agent?.lastRunAt || "");
+  // A state entry alone is not enough: require the durable artifact too, so a
+  // killed agent is retried rather than being silently skipped on resume.
+  return Number.isFinite(finished) && finished >= Date.parse(timestamp) && Boolean(state.artifacts?.[slug]);
+}
+
 function runAgent(slug, cohort) {
   return new Promise((resolve, reject) => {
     // Pass the live-smoke cohort scope down so run-agent limits the agent's lead
@@ -64,6 +73,7 @@ async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const noIngest = process.argv.includes("--no-ingest");
   const cohort = flagValue("--cohort");
+  const resumeSince = flagValue("--resume-since");
   const liveMode = process.argv.includes("--live") || isLiveSmokeMode();
 
   // Fail closed: in live-smoke mode a cohort-scoped pipeline must be given --cohort
@@ -90,7 +100,12 @@ async function main() {
 
   const registry = await readRegistry();
   const state = await readState();
-  const plan = planPipeline(registry, state, pipelineName, product, { force });
+  const plan = planPipeline(registry, state, pipelineName, product, { force }).map((step) => {
+    if (step.run && !force && completedSince(state, step.slug, resumeSince)) {
+      return { ...step, run: false, skipReason: "completed during interrupted live-smoke run" };
+    }
+    return step;
+  });
 
   console.log(`\n[pipeline] ${pipelineName} · ${product}${force ? " · force" : ""}${cohort ? ` · cohort ${cohort}` : ""}${liveMode ? " · live-smoke" : ""}`);
   for (const step of plan) {

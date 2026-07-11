@@ -109,7 +109,7 @@ Sequence shape is deterministic (`src/sequence-skeleton.js`) from `SEQUENCE_POLI
 
 ### Draft-only smoke
 
-`npm run smoke:seed && npm run smoke:fixture && npm run smoke:assert` runs a six-account (3 GNK + 3 OutageHub) draft-only smoke through the real lineage, approval queue, and reporting with no credentials — enforcing nine hard gates (no send routes, no sent events, 4/5 touches per brand, one brand+play per lead, guessed emails unapprovable, clean end-state). See [`docs/smoke-runbook.md`](docs/smoke-runbook.md) for both the deterministic mode and the manual live-agent runbook.
+`npm run smoke:seed && npm run smoke:fixture && npm run smoke:assert` runs a six-account (3 GNK + 3 OutageHub) draft-only fixture smoke through the real lineage, approval queue, and reporting with no credentials — enforcing nine hard gates (no send routes, no sent events, 4/5 touches per brand, one brand+play per lead, guessed emails unapprovable, clean end-state). The credentialed six-account loop is operated from the dashboard **Run** action or the OpenClaw Revenue Controller; `npm run smoke:live` remains the single-command debugging fallback. See [`docs/smoke-runbook.md`](docs/smoke-runbook.md).
 
 ### Google Workspace
 

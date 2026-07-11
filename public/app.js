@@ -2198,7 +2198,7 @@ function renderLiveSmoke() {
         text: running ? "Running…" : (st && st.blockers && st.blockers.length ? "Resume run" : "Run live smoke"),
         onclick: async () => { await apiPost("/api/smoke-live"); setTimeout(refresh, 500); }
       }),
-      h("span", { class: "muted", text: running ? `stage: ${st.current_stage || "…"}${st.current_agent ? ` · agent: ${st.current_agent}` : ""} · ${Math.round((st.elapsed_ms || 0) / 1000)}s` : (pf.ok ? "preflight OK — ready" : "preflight blocked") })
+      h("span", { class: "muted", text: running ? `stage: ${st.current_stage || "…"}${st.current_account ? ` · accounts: ${st.current_account}` : ""}${st.current_agent ? ` · agent: ${st.current_agent}` : ""} · ${Math.round((st.elapsed_ms || 0) / 1000)}s` : (pf.ok ? "preflight OK — ready" : "preflight blocked") })
     ]);
 
     // Preflight / credential readiness.
@@ -2208,7 +2208,11 @@ function renderLiveSmoke() {
     ]);
 
     // Stages + blockers + report.
-    const stagesBox = h("div", { class: "card" }, [h("strong", { text: "Stages" }), ...((st.stages || []).map(smokeStageRow))]);
+    const stagesBox = h("div", { class: "card" }, [
+      h("strong", { text: "Stages" }),
+      h("p", { class: "muted", text: `Completed accounts: ${(st.completed_accounts || []).length}/${st.total_accounts || 6}${(st.completed_accounts || []).length ? ` · ${(st.completed_accounts || []).join(", ")}` : ""}` }),
+      ...((st.stages || []).map(smokeStageRow))
+    ]);
     const blockers = (st.blockers || []);
     const blockersBox = h("div", { class: "card" }, [
       h("strong", { text: `Blockers (${blockers.length})` }),

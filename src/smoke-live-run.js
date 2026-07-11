@@ -31,16 +31,49 @@ import { normalizeProduct } from "./lineage.js";
 
 const execFileAsync = promisify(execFile);
 const now = () => new Date().toISOString();
-const STATUS_PATH = () => fromRoot("data", "artifacts", "smoke-live-status.json");
+// Tests and isolated environments can override this; production always uses the
+// dashboard-visible artifact path. This prevents fixture runs from ever
+// overwriting a live controller's operational status.
+const STATUS_PATH = () => process.env.SMOKE_LIVE_STATUS_PATH || fromRoot("data", "artifacts", "smoke-live-status.json");
 const MAX_TRANSIENT_RETRIES = 2;
+let activeRunControl = null;
 
 // ---- shared status file (dashboard + controller read this) ------------------
 export function readSmokeStatus() {
   try { return JSON.parse(fs.readFileSync(STATUS_PATH(), "utf8")); } catch { return null; }
 }
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+// A persisted `active: true` is only authoritative while the orchestrator PID
+// exists. This lets the dashboard recover safely after an OS/gateway kill
+// rather than leaving operators with a permanently disabled Resume button.
+export function isSmokeRunActive(status = readSmokeStatus()) {
+  return Boolean(status?.active && isPidAlive(status.runner_pid));
+}
 function writeStatus(status) {
   try { fs.writeFileSync(STATUS_PATH(), JSON.stringify(status, null, 2) + "\n"); } catch { /* best-effort */ }
   return status;
+}
+
+// The command runner can be terminated by the gateway or a deploy. Record a
+// durable, actionable blocker synchronously before the process exits so the
+// next controller/dashboard invocation can resume from completed stages.
+export function interruptActiveRun(signal = "SIGTERM") {
+  const control = activeRunControl;
+  if (!control?.status?.active) return false;
+  const { status, mark, stage } = control;
+  const key = status.current_stage;
+  if (key && key !== "preflight" && key !== "report") {
+    stage(key, { status: "interrupted", error: `orchestrator interrupted by ${signal}`, ended_at: now() });
+  }
+  status.blockers.push({
+    type: "interrupted", human: "operator",
+    detail: `OpenClaw controller interrupted by ${signal}; no approval or send was performed. Resume is safe.`,
+  });
+  mark({ active: false, current_stage: "interrupted", current_agent: null, note: "interrupted — resume safely from completed stages" });
+  return true;
 }
 
 // ---- classification of a failed pipeline subprocess -------------------------
@@ -100,6 +133,15 @@ function accountLead(database, account) {
   const row = database.prepare("SELECT id FROM leads WHERE company_domain=? AND product=? AND cohort_id=?").get(account.domain, product, cohortIdFor({ ...account, product }));
   return row ? database.prepare("SELECT * FROM leads WHERE id=?").get(row.id) : null;
 }
+function completedAccounts(database, manifest) {
+  return manifest.filter((account) => {
+    const lead = accountLead(database, account);
+    return lead && isLoopComplete(accountStage(database, lead));
+  }).map((account) => account.company);
+}
+function scopeLabel(manifest, brand) {
+  return brandAccounts(manifest, brand).map((account) => account.company).join(", ");
+}
 function initComplete(database, manifest) {
   return manifest.every((a) => accountLead(database, a));
 }
@@ -116,9 +158,11 @@ async function brandComplete(database, manifest, brand) {
 }
 
 // ---- run one brand's `full` pipeline as a supervised subprocess -------------
-function runPipelineOnce(product, cohort, onData) {
+function runPipelineOnce(product, cohort, resumeSince, onData) {
   return new Promise((resolve) => {
-    const child = spawn("node", ["src/run-pipeline.js", "full", product, "--cohort", cohort],
+    const args = ["src/run-pipeline.js", "full", product, "--cohort", cohort];
+    if (resumeSince) args.push("--resume-since", resumeSince);
+    const child = spawn("node", args,
       { cwd: fromRoot(), env: { ...process.env, LIVE_SMOKE: "1" } });
     let output = "";
     const collect = (chunk) => { const s = chunk.toString(); output += s; if (onData) onData(s); process.stdout.write(s); };
@@ -130,10 +174,10 @@ function runPipelineOnce(product, cohort, onData) {
 }
 
 // Retry only genuine transient failures; stop hard on conflicts / unknown errors.
-async function runBrandSupervised(product, cohort, mark) {
+async function runBrandSupervised(product, cohort, resumeSince, mark) {
   for (let attempt = 1; attempt <= MAX_TRANSIENT_RETRIES + 1; attempt++) {
     mark({ current_stage: `${product}_pipeline`, current_attempt: attempt });
-    const { code, output } = await runPipelineOnce(product, cohort, (s) => {
+    const { code, output } = await runPipelineOnce(product, cohort, resumeSince, (s) => {
       const m = s.match(/\[pipeline\] → (\S+)/);
       if (m) mark({ current_agent: m[1] });
     });
@@ -151,14 +195,20 @@ async function runBrandSupervised(product, cohort, mark) {
 
 // ---- the orchestrator -------------------------------------------------------
 export async function runSmokeLive({ database = db(), manifest = loadManifest(), startedAt = now() } = {}) {
+  const previous = readSmokeStatus();
+  const resumeSince = previous?.current_stage === "interrupted" ? previous.started_at : null;
   const status = {
     started_at: startedAt, updated_at: startedAt, active: true,
+    runner_pid: process.pid,
     current_stage: "preflight", current_agent: null, current_attempt: null,
+    current_account: null, completed_accounts: [], total_accounts: manifest.length,
+    resumed_from: resumeSince,
     stages: [], blockers: [], preflight: null, report: null, note: null,
   };
   const t0 = Date.now();
   const mark = (patch = {}) => {
     Object.assign(status, patch);
+    status.completed_accounts = completedAccounts(database, manifest);
     status.updated_at = now();
     status.elapsed_ms = Date.now() - t0;
     writeStatus(status);
@@ -169,6 +219,7 @@ export async function runSmokeLive({ database = db(), manifest = loadManifest(),
     else status.stages.push({ key, ...patch });
     mark();
   };
+  activeRunControl = { status, mark, stage };
   mark();
 
   // 1) PREFLIGHT — hard gate. Never runs an agent if this fails.
@@ -178,6 +229,7 @@ export async function runSmokeLive({ database = db(), manifest = loadManifest(),
   if (!pf.ok) {
     status.blockers = pf.blockers;
     mark({ active: false, current_stage: "blocked", note: "preflight failed — resolve blockers before running" });
+    activeRunControl = null;
     return status;
   }
 
@@ -198,6 +250,7 @@ export async function runSmokeLive({ database = db(), manifest = loadManifest(),
       status.blockers.push({ type: "init", human: "operator", detail: error.message });
       stage("init", { status: "blocked", error: error.message, ended_at: now() });
       mark({ active: false, current_stage: "blocked" });
+      activeRunControl = null;
       return status;
     }
   }
@@ -209,33 +262,44 @@ export async function runSmokeLive({ database = db(), manifest = loadManifest(),
       stage(`${brand}_pipeline`, { status: "skipped", detail: "all brand accounts already at pending_approval", ended_at: now() });
       continue;
     }
-    stage(`${brand}_pipeline`, { status: "running", started_at: now() });
-    const result = await runBrandSupervised(brand, group, mark);
+    const currentAccount = `${brand === "gnk" ? "GNK" : "OutageHub"} cohort: ${scopeLabel(manifest, brand)}`;
+    stage(`${brand}_pipeline`, { status: "running", current_account: currentAccount, started_at: now() });
+    mark({ current_account: currentAccount });
+    const result = await runBrandSupervised(brand, group, resumeSince, mark);
     if (!result.ok) {
       const type = result.kind === "conflict" ? "conflict" : "pipeline_error";
       status.blockers.push({ type, brand, human: result.kind === "conflict" ? "operator" : "engineer", detail: result.error });
       stage(`${brand}_pipeline`, { status: "blocked", attempts: result.attempts, error: result.error, ended_at: now() });
       mark({ active: false, current_stage: "blocked", current_agent: null });
+      activeRunControl = null;
       return status; // stop hard — do not proceed to the next brand on an unresolved blocker
     }
     stage(`${brand}_pipeline`, { status: "ok", attempts: result.attempts, ended_at: now() });
   }
 
   // 5) FINAL REPORT — loop-status vocabulary (loop_complete, NOT closed/won).
-  mark({ current_stage: "report", current_agent: null });
+  mark({ current_stage: "report", current_agent: null, current_account: null });
   const report = await buildLiveLoopReport(database, manifest);
   status.report = report.verdict;
   stage("report", { status: "ok", ended_at: now() });
   mark({
     active: false,
     current_stage: "done",
+    current_account: null,
     note: `loop_complete ${report.verdict.loop_complete_accounts}/${report.verdict.of}; draft_only ${report.verdict.draft_only_intact ? "intact" : "VIOLATED"}; won ${report.verdict.won_accounts}`,
   });
+  activeRunControl = null;
   return status;
 }
 
 // ---- CLI (debug entry; the product path is the controller/dashboard) --------
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const onSignal = (signal) => {
+    interruptActiveRun(signal);
+    process.exit(143);
+  };
+  process.once("SIGTERM", () => onSignal("SIGTERM"));
+  process.once("SIGINT", () => onSignal("SIGINT"));
   runSmokeLive()
     .then((status) => {
       console.log("\n=== smoke:live final status ===");
