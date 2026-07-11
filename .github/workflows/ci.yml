@@ -17,6 +17,10 @@ jobs:
       # is nothing to `npm ci`. Run the same gates enforced locally.
       - name: Tests
         run: npm test
+      # The OpenClaw workspace docs are generated + gitignored, so scaffold them
+      # (pure file writes, no openclaw CLI) before the agent-protocol validation.
+      - name: Scaffold agent workspaces
+        run: npm run scaffold:workspaces
       - name: Validate agents
         run: npm run validate:agents
       - name: Acceptance gates

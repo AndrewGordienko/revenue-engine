@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "setup": "node src/setup-openclaw.js",
+    "scaffold:workspaces": "node src/scaffold-workspaces.js",
     "research:radar": "node src/run-agent.js revenue-demand-radar",
     "research:gnk": "node src/run-agent.js gnk-company-context",
     "research:icp": "node src/run-agent.js gnk-icp-contact-profile",

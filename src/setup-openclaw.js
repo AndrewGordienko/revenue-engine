@@ -55,7 +55,7 @@ async function listAgents() {
   return JSON.parse(stdout.slice(jsonStart));
 }
 
-function workspaceDocs(agent) {
+export function workspaceDocs(agent) {
   const instructionsPath = fromRoot(`agents/${agent.slug}/instructions.md`);
   const statePath = fromRoot("data/state.json");
   const messagesPath = fromRoot("data/messages.jsonl");
@@ -122,8 +122,9 @@ ${projectDescription} Optimize for practical outbound sales work, grounded evide
   };
 }
 
-async function writeWorkspaceDocs(agent) {
+export async function writeWorkspaceDocs(agent) {
   const workspace = fromRoot(agent.workspace);
+  await fs.mkdir(workspace, { recursive: true });
   const docs = workspaceDocs(agent);
   for (const [fileName, content] of Object.entries(docs)) {
     await fs.writeFile(path.join(workspace, fileName), content);
@@ -195,7 +196,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.stack || error.message);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(error.stack || error.message);
+    process.exit(1);
+  });
+}
