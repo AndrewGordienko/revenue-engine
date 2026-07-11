@@ -181,9 +181,15 @@ function runPipelineOnce(product, cohort, resumeSince, onData) {
 
 // Retry only genuine transient failures; stop hard on conflicts / unknown errors.
 async function runBrandSupervised(product, cohort, resumeSince, mark) {
+  let retryResumeSince = resumeSince;
   for (let attempt = 1; attempt <= MAX_TRANSIENT_RETRIES + 1; attempt++) {
     mark({ current_stage: `${product}_pipeline`, current_attempt: attempt });
-    const { code, output } = await runPipelineOnce(product, cohort, resumeSince, (s) => {
+    // If this brand attempt fails transiently, the next attempt resumes at this
+    // timestamp and skips only agents that published a durable artifact during
+    // the failed attempt. That retries the failed agent without repeating the
+    // already-complete source/research work.
+    const attemptStartedAt = now();
+    const { code, output } = await runPipelineOnce(product, cohort, retryResumeSince, (s) => {
       const m = s.match(/\[pipeline\] → (\S+)/);
       if (m) mark({ current_agent: m[1] });
     });
@@ -191,6 +197,7 @@ async function runBrandSupervised(product, cohort, resumeSince, mark) {
     const kind = classifyFailure(output);
     if (kind === "transient" && attempt <= MAX_TRANSIENT_RETRIES) {
       mark({ note: `${product} transient failure (attempt ${attempt}) — retrying` });
+      retryResumeSince = attemptStartedAt;
       continue;
     }
     const tail = output.split("\n").filter(Boolean).slice(-6).join("\n");
