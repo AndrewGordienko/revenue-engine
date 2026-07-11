@@ -1073,6 +1073,17 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .call-brief { flex: 1 0 100%; margin-top: 6px; padding: 12px; border-top: 1px solid var(--line); }
 .call-brief p, .call-brief li { color: var(--ink-2); font-size: 0.84rem; line-height: 1.45; }
 .call-brief ul { margin: 8px 0 0 18px; }
+.draft-only-banner { display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; margin-bottom: 16px; border: 1px solid #e6c98a; border-left: 4px solid #d9a441; border-radius: 12px; background: #fdf6e6; }
+.draft-only-banner strong { color: #8a5a12; }
+.draft-only-banner span { color: var(--ink-2); font-size: 0.85rem; line-height: 1.45; }
+.agent-health-list { display: flex; flex-direction: column; gap: 8px; }
+.agent-health-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.agent-health-row.critical { border-left: 3px solid var(--green); }
+.ah-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ah-main p.small { font-size: 0.8rem; margin-top: 4px; }
+.ah-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; color: var(--muted); font-size: 0.76rem; white-space: nowrap; }
+.warn-line { color: #b4560f; }
+.chip.warn { background: #fdecea; color: #b4231a; }
 @media (max-width: 720px) { .integration-strip { grid-template-columns: 1fr; } }
 /* ---------- lead memory panel ---------- */
 .memory-block { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }

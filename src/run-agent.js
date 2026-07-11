@@ -18,6 +18,7 @@ import { recordArtifactToLeadMemory } from "./lead-memory-record.js";
 import { readMemoryEvents, reduceLeadMemory } from "./lead-memory.js";
 import { fromRoot } from "./paths.js";
 import { PORTFOLIO_STRATEGY, SALES_PLAYS, SEQUENCE_POLICIES, STRATEGY_VERSION } from "./sales-plays.js";
+import { sequenceSkeleton } from "./sequence-skeleton.js";
 
 // Agents that do live public web research and benefit from querying several
 // search engines and combining the results (multi-search-engine skill).
@@ -206,7 +207,9 @@ function validateEmailReviewerArtifact(agent, artifact) {
 function enforceSequencePolicy(agent, artifact) {
   const sequenceKey = agent.slug.endsWith("email-sequence-reviewer")
     ? "improved_person_email_sequences"
-    : agent.slug.endsWith("email-sequence-drafter")
+    // The unified writer (email-drafter) and the legacy sequence-drafter both emit
+    // full per-person sequences and are held to the brand's binding touch count.
+    : (agent.slug.endsWith("email-sequence-drafter") || agent.slug.endsWith("email-drafter"))
       ? "person_email_sequences"
       : null;
   if (!sequenceKey) return artifact;
@@ -476,12 +479,16 @@ function buildCommercialStrategyBlock(agent) {
   const product = productForAgent(agent);
   const plays = product === "portfolio" ? SALES_PLAYS : SALES_PLAYS.filter((play) => play.brand === product);
   const policy = SEQUENCE_POLICIES[product];
+  // The sequence skeleton is deterministic (see sequence-skeleton.js). Writers
+  // fill grounded content into this fixed shape — they never invent touch counts,
+  // cadence, or the job of each touch.
+  const skeleton = product === "portfolio" ? null : sequenceSkeleton(product);
   return [
     "",
     `Binding commercial strategy — ${STRATEGY_VERSION}:`,
     "This block overrides any older pricing, volume, offer, or sequence language elsewhere in the prompt.",
     "GNK and OutageHub share research/CRM infrastructure only; never transfer economics, offers, proof, sequence, or closing motion between them.",
-    JSON.stringify({ portfolio: PORTFOLIO_STRATEGY, active_brand: product, sales_plays: plays, sequence_policy: policy }, null, 2),
+    JSON.stringify({ portfolio: PORTFOLIO_STRATEGY, active_brand: product, sales_plays: plays, sequence_policy: policy, sequence_skeleton: skeleton }, null, 2),
     product === "gnk"
       ? "Enforce a one-deal, high-trust motion. Prefer warm introductions, observable triggers, and partners. Do not optimize for hundreds of generic cold emails. Only the three listed sprints may be presented externally; the paid one-week shaping engagement is the fallback."
       : product === "outagehub"

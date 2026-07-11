@@ -44,9 +44,13 @@ export function approveCohort(database, cohortId, { approved_by = "operator", ru
   if (!cohort) throw new Error(`unknown cohort: ${cohortId}`);
   if (!cohort.play_id) throw new Error("cohort approval requires exactly one play_id");
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) throw new Error("cohort approval requires a rules object");
+  // Draft-only invariant: no cohort can opt into automatic sending, and every
+  // message still requires individual human approval. These are forced on write
+  // so a caller cannot approve a cohort into an auto-sending state.
+  const safeRules = { ...rules, auto_send: false, human_message_approval_required: true };
   const approvedAt = now();
   database.prepare("UPDATE cohorts SET status='approved', rules=?, approved_at=?, approved_by=? WHERE cohort_id=?")
-    .run(JSON.stringify(rules), approvedAt, approved_by, cohortId);
+    .run(JSON.stringify(safeRules), approvedAt, approved_by, cohortId);
   return database.prepare("SELECT * FROM cohorts WHERE cohort_id=?").get(cohortId);
 }
 

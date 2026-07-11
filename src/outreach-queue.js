@@ -3,6 +3,7 @@ import { getLead, sendEligibility } from "./crm-model.js";
 import { approveCohort, getCohort } from "./lineage.js";
 import { GmailProvider } from "./google-workspace.js";
 import { recordRevenueEvent } from "./revenue-events.js";
+import { assertSendingEnabled } from "./outbound-guard.js";
 
 const now = () => new Date().toISOString();
 
@@ -54,6 +55,8 @@ export async function createProviderDraft(id, provider = new GmailProvider(), da
 }
 
 export async function sendApprovedDraft(id, provider = new GmailProvider(), { confirmed = false } = {}, database = db()) {
+  // Draft-only mode blocks sending before confirmation is even considered.
+  assertSendingEnabled("sendApprovedDraft");
   if (!confirmed) throw new Error("sending requires explicit human confirmation");
   const message = getOutreachMessage(database, id);
   if (!message || message.status !== "provider_draft") throw new Error("message must have an approved provider draft");
