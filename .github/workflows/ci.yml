@@ -25,3 +25,11 @@ jobs:
         run: npm run validate:agents
       - name: Acceptance gates
         run: npm run acceptance
+      # Deterministic six-account draft-only smoke — no OpenClaw credentials.
+      - name: Draft-only smoke
+        run: |
+          export CRM_DB_PATH="$RUNNER_TEMP/smoke.db"
+          export LEAD_MEMORY_DIR="$RUNNER_TEMP/smoke-mem"
+          npm run smoke:seed
+          npm run smoke:fixture
+          npm run smoke:assert

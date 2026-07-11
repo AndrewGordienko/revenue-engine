@@ -107,6 +107,10 @@ Sequence shape is deterministic (`src/sequence-skeleton.js`) from `SEQUENCE_POLI
 
 `npm run acceptance` runs the agent scorecard against the 40-account benchmark (`npm run benchmark:build`): the deterministic classifier benchmark, `>=2/3` stability, field-consumption report, and the engineering gates (`<=6` critical lead calls, zero cross-brand leakage, strategy off the critical path, no guessed-email send-ready, deterministic stability, good-fit accuracy).
 
+### Draft-only smoke
+
+`npm run smoke:seed && npm run smoke:fixture && npm run smoke:assert` runs a six-account (3 GNK + 3 OutageHub) draft-only smoke through the real lineage, approval queue, and reporting with no credentials — enforcing nine hard gates (no send routes, no sent events, 4/5 touches per brand, one brand+play per lead, guessed emails unapprovable, clean end-state). See [`docs/smoke-runbook.md`](docs/smoke-runbook.md) for both the deterministic mode and the manual live-agent runbook.
+
 ### Google Workspace
 
 Copy `.env.example` into your secret environment and provide either `GOOGLE_ACCESS_TOKEN` or the client ID, client secret, and refresh token. The OAuth grant needs Gmail compose/read access and Calendar free-busy/event access. Credentials are never stored in this repository.

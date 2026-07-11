@@ -7,6 +7,7 @@ data/*
 !data/inputs/
 data/inputs/*
 !data/inputs/account-list.example.json
+!data/inputs/live-smoke-accounts.example.json
 !data/ontology/
 data/ontology/*
 !data/ontology/schema.yaml
