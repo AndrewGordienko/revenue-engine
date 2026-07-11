@@ -161,7 +161,12 @@ function triggerPipeline(response, product = "gnk") {
     output: ""
   };
 
-  const child = spawn("node", ["src/run-sequence.js", product], {
+  // Canonical orchestration path: the SAME named pipeline the CLI runs
+  // (`npm run pipeline:gnk` === run-pipeline.js full gnk). This replaces the old
+  // run-sequence.js "run every non-optional agent" path so the dashboard and CLI
+  // can no longer diverge. `full` is freshness-aware and closes the loop
+  // (sourced accounts -> CRM, reviewed sequences -> approval queue).
+  const child = spawn("node", ["src/run-pipeline.js", "full", product], {
     cwd: fromRoot(),
     stdio: ["ignore", "pipe", "pipe"]
   });

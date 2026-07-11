@@ -8,6 +8,36 @@ import { readRegistry, readState } from "./bus.js";
 import { fromRoot } from "./paths.js";
 import { PIPELINES, planPipeline, normalizeProduct } from "./pipelines.js";
 import { isLiveSmokeMode, requireCohortForLiveSmoke } from "./smoke-live.js";
+import { ingestFromState } from "./ingest-leads.js";
+import { promoteSequencesFromState } from "./promote-sequences.js";
+
+// Which named pipelines close which side of the loop. cohort:build sources
+// accounts -> ingest them into the CRM; lead:prepare writes reviewed sequences
+// -> promote them into the pending-approval queue. This is what removes the
+// manual "copy JSON / repair the db" step between agents and the CRM.
+function pipelineTouches(pipelineName) {
+  const def = PIPELINES[pipelineName] || {};
+  const names = def.chain || [pipelineName];
+  return {
+    ingest: names.includes("cohort:build"),
+    promote: names.includes("lead:prepare"),
+  };
+}
+
+// Post-pipeline adapters. Run in-process after the agent subprocesses finish and
+// have published their artifacts to the shared state bus.
+async function runPostPipeline(pipelineName, product) {
+  const touches = pipelineTouches(pipelineName);
+  if (touches.ingest) {
+    const result = await ingestFromState(product);
+    console.log(`[ingest] +${result.added} new, ${result.updated} updated, ${result.total} total leads`);
+  }
+  if (touches.promote) {
+    const summary = await promoteSequencesFromState(product);
+    if (!summary) console.log("[promote] no email-sequence-reviewer artifact in state — nothing to queue");
+    else console.log(`[promote] ${summary.accounts_queued} accounts queued, ${summary.messages_queued} messages pending approval, ${summary.skipped} skipped (${JSON.stringify(summary.skipped_reasons)})`);
+  }
+}
 
 function flagValue(name) {
   const i = process.argv.indexOf(name);
@@ -29,6 +59,7 @@ async function main() {
   const product = normalizeProduct(process.argv[3] || "gnk");
   const force = process.argv.includes("--force");
   const dryRun = process.argv.includes("--dry-run");
+  const noIngest = process.argv.includes("--no-ingest");
   const cohort = flagValue("--cohort");
   const liveMode = process.argv.includes("--live") || isLiveSmokeMode();
 
@@ -57,6 +88,16 @@ async function main() {
   for (const step of toRun) {
     console.log(`\n[pipeline] → ${step.slug}${cohort ? ` (scope ${cohort})` : ""}`);
     await runAgent(step.slug, cohort);
+  }
+
+  // Close the loop: sourced accounts -> CRM leads, reviewed sequences -> approval
+  // queue. --no-ingest leaves the artifacts published but does not touch the CRM.
+  if (!noIngest) {
+    const touches = pipelineTouches(pipelineName);
+    if (touches.ingest || touches.promote) {
+      console.log(`\n[pipeline] closing the loop (ingest=${touches.ingest}, promote=${touches.promote})`);
+      await runPostPipeline(pipelineName, product);
+    }
   }
 }
 
