@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      # No dependencies to install (the engine runs on Node built-ins), so there
+      # is nothing to `npm ci`. Run the same gates enforced locally.
+      - name: Tests
+        run: npm test
+      # The OpenClaw workspace docs are generated + gitignored, so scaffold them
+      # (pure file writes, no openclaw CLI) before the agent-protocol validation.
+      - name: Scaffold agent workspaces
+        run: npm run scaffold:workspaces
+      - name: Validate agents
+        run: npm run validate:agents
+      - name: Acceptance gates
+        run: npm run acceptance

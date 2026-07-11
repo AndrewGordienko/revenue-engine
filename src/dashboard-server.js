@@ -11,9 +11,9 @@ import { loadGraph, toGraphView, graphSummary } from "./ontology.js";
 import { appendMemory, leadMemory, memorySummary, MEMORY_EVENT_TYPES } from "./lead-memory.js";
 import { buildPipelineReport } from "./pipeline-report.js";
 import { listRevenueEvents, recordRevenueEvent } from "./revenue-events.js";
-import { approveOutreachCohort, approveOutreachMessage, createProviderDraft, listCohorts, listOutreachMessages, queueOutreachMessage, rejectOutreachMessage, sendApprovedDraft, syncGmail } from "./outreach-queue.js";
+import { approveOutreachCohort, approveOutreachMessage, createProviderDraft, listCohorts, listOutreachMessages, queueOutreachMessage, rejectOutreachMessage, syncGmail } from "./outreach-queue.js";
 import { GmailProvider, GoogleCalendarProvider, googleWorkspaceStatus } from "./google-workspace.js";
-import { sendingEnabled } from "./outbound-guard.js";
+import { OUTBOUND_SENDING_SUPPORTED } from "./outbound-guard.js";
 import { buildAgentHealth } from "./agent-health.js";
 import { bookMeeting, buildCallBrief, listMeetings, proposeMeetingTimes } from "./meetings.js";
 
@@ -219,7 +219,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/integrations" && request.method === "GET") {
-      sendJson(response, 200, { ...(await googleWorkspaceStatus()), outbound_sending_enabled: sendingEnabled(), mode: sendingEnabled() ? "sending" : "draft_only" });
+      sendJson(response, 200, { ...(await googleWorkspaceStatus()), outbound_sending_enabled: false, outbound_sending_supported: OUTBOUND_SENDING_SUPPORTED, mode: "draft_only" });
       return;
     }
 
@@ -258,20 +258,16 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    const outreachAction = url.pathname.match(/^\/api\/outreach-queue\/(\d+)\/(approve|reject|draft|send)$/);
+    // No "send" action exists — sending is not implemented in this build.
+    const outreachAction = url.pathname.match(/^\/api\/outreach-queue\/(\d+)\/(approve|reject|draft)$/);
     if (outreachAction && request.method === "POST") {
       const id = Number(outreachAction[1]);
       const action = outreachAction[2];
       const body = await readBody(request);
-      if (action === "send" && !sendingEnabled()) {
-        sendJson(response, 403, { ok: false, error: "Draft-only mode: outbound sending is disabled. Create a Gmail draft and send it yourself from Gmail." });
-        return;
-      }
       try {
         const result = action === "approve" ? approveOutreachMessage(id, body)
           : action === "reject" ? rejectOutreachMessage(id, body)
-          : action === "draft" ? await createProviderDraft(id, new GmailProvider())
-          : await sendApprovedDraft(id, new GmailProvider(), { confirmed: body.confirmed === true });
+          : await createProviderDraft(id, new GmailProvider());
         sendJson(response, 200, { ok: true, result });
       } catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
       return;

@@ -17,7 +17,7 @@ const { setStage, getLead } = await import("./crm-model.js");
 const { approveOutreachCohort, approveOutreachMessage, createProviderDraft, queueOutreachMessage, sendApprovedDraft } = await import("./outreach-queue.js");
 const { buildPipelineReport } = await import("./pipeline-report.js");
 const { GmailProvider } = await import("./google-workspace.js");
-const { sendingEnabled, assertSendingEnabled } = await import("./outbound-guard.js");
+const { assertSendingUnsupported, OUTBOUND_SENDING_SUPPORTED } = await import("./outbound-guard.js");
 const { getCohort } = await import("./lineage.js");
 const { STRATEGY_VERSION } = await import("./sales-plays.js");
 
@@ -30,23 +30,16 @@ class ExplodingGmail {
   async sendDraft() { throw new Error("PROVIDER_SEND_REACHED: this must never run in draft-only mode"); }
 }
 
-test("sendingEnabled defaults to false and only trues for explicit opt-in", () => {
-  assert.equal(sendingEnabled({}), false);
-  assert.equal(sendingEnabled({ OUTBOUND_SENDING_ENABLED: "0" }), false);
-  assert.equal(sendingEnabled({ OUTBOUND_SENDING_ENABLED: "false" }), false);
-  assert.equal(sendingEnabled({ OUTBOUND_SENDING_ENABLED: "1" }), true);
-  assert.equal(sendingEnabled({ OUTBOUND_SENDING_ENABLED: "true" }), true);
-  assert.equal(sendingEnabled({ OUTBOUND_SENDING_ENABLED: "yes" }), true);
+test("sending is unsupported in this build and cannot be enabled by configuration", () => {
+  process.env.OUTBOUND_SENDING_ENABLED = "1"; // must have no effect whatsoever
+  assert.equal(OUTBOUND_SENDING_SUPPORTED, false);
+  assert.throws(() => assertSendingUnsupported("x"), /OUTBOUND_SENDING_UNSUPPORTED/);
+  delete process.env.OUTBOUND_SENDING_ENABLED;
 });
 
-test("GmailProvider.sendDraft throws before any network call while disabled", async () => {
-  const gmail = new GmailProvider({ env: {} }); // no credentials at all
-  await assert.rejects(() => gmail.sendDraft("draft-x"), /OUTBOUND_SENDING_DISABLED/);
-});
-
-test("assertSendingEnabled throws in draft-only mode and passes only when opted in", () => {
-  assert.throws(() => assertSendingEnabled("x", {}), /OUTBOUND_SENDING_DISABLED/);
-  assert.doesNotThrow(() => assertSendingEnabled("x", { OUTBOUND_SENDING_ENABLED: "1" }));
+test("GmailProvider.sendDraft throws unconditionally, even with OUTBOUND_SENDING_ENABLED=1", async () => {
+  const gmail = new GmailProvider({ env: { OUTBOUND_SENDING_ENABLED: "1" } });
+  await assert.rejects(() => gmail.sendDraft("draft-x"), /OUTBOUND_SENDING_UNSUPPORTED/);
 });
 
 test("cohort approval forces auto_send off and human approval on, even if a caller asks otherwise", async () => {
@@ -80,13 +73,15 @@ test("creating a Gmail draft never marks the lead contacted and never records a 
   assert.equal(report.messages_sent, 0, "no sent event is recorded merely because a draft exists");
 });
 
-test("sendApprovedDraft refuses in draft-only mode even with explicit confirmation", async () => {
+test("sendApprovedDraft refuses unconditionally, even with confirmation and the env flag set", async () => {
+  process.env.OUTBOUND_SENDING_ENABLED = "1"; // must have no effect
   const database = db();
   const messages = database.prepare("SELECT id FROM outreach_messages WHERE status='provider_draft' LIMIT 1").all();
   assert.ok(messages.length, "a provider draft exists to attempt sending");
   await assert.rejects(
     () => sendApprovedDraft(messages[0].id, new ExplodingGmail(), { confirmed: true }, database),
-    /OUTBOUND_SENDING_DISABLED/,
+    /OUTBOUND_SENDING_UNSUPPORTED/,
     "sending must be blocked before the provider send method is reached"
   );
+  delete process.env.OUTBOUND_SENDING_ENABLED;
 });
