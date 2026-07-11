@@ -57,6 +57,14 @@ export async function seedSmokeAccounts(database = db()) {
 
 function buildDossier(lead, account) {
   const play = PLAYS_BY_ID[account.play_id];
+  const teamUrl = `https://${account.domain}/team`;
+  // Every public claim is mapped to specific supporting source URLs. The union of
+  // those URLs is the dossier's approved evidence; nothing outside it may be cited.
+  const claims = [
+    { text: `${account.company} ${account.trigger}`, source_urls: [account.trigger_source] },
+    { text: `${account.name} (${account.title}) is the buyer/router: ${account.buyer_route}`, source_urls: [teamUrl] },
+  ];
+  const approved_evidence = [...new Set(claims.flatMap((c) => c.source_urls))];
   return {
     company: account.company, person_name: account.name, play_id: account.play_id,
     trigger: account.trigger, trigger_source: account.trigger_source,
@@ -66,9 +74,17 @@ function buildDossier(lead, account) {
     proof_available: (play?.proof_required || []).slice(0, 2), proof_missing: [],
     contact_evidence: { email: lead.email_best, source: lead.email_source_url, status: lead.address_found_or_guessed },
     recommended_angle: `Lead with the observed trigger (${account.trigger}) and the ${play?.name || account.play_id} outcome.`,
+    claims, approved_evidence,
     claims_allowed: [account.trigger], claims_forbidden: ["needs us", "struggling", "recurring problems"],
     dossier_status: "produced",
   };
+}
+
+// A sequence is groundable only if every touch cites evidence and every cited URL
+// is in the dossier's approved evidence. Ungroundable sequences never go 'ready'.
+export function groundingSupported(dossier, emails) {
+  const approved = new Set(dossier.approved_evidence || []);
+  return emails.every((email) => (email.grounding_used || []).length > 0 && (email.grounding_used || []).every((url) => approved.has(url)));
 }
 
 function buildSequence(lead, account) {
@@ -82,7 +98,9 @@ function buildSequence(lead, account) {
     grounding_used: [account.trigger_source],
     stop_or_continue_rule: "Stop the sequence immediately on any reply.",
   }));
-  return { touch_count: skeleton.touch_count, emails, review_score: 84, send_readiness: "ready" };
+  // Readiness is earned by grounding: only a fully-grounded sequence goes 'ready'.
+  const send_readiness = groundingSupported({ approved_evidence: [account.trigger_source, `https://${account.domain}/team`] }, emails) ? "ready" : "needs_human_review";
+  return { touch_count: skeleton.touch_count, emails, review_score: 84, send_readiness };
 }
 
 export function runSmokeFixture(database = db(), artifactsPath = null) {
@@ -97,7 +115,7 @@ export function runSmokeFixture(database = db(), artifactsPath = null) {
     for (const email of sequence.emails) {
       queueOutreachMessage({ lead_id: lead.id, touch_number: email.touch_number, recipient: lead.email_best, subject: email.recommended_subject, body: email.body, review_status: sequence.send_readiness, evidence: email.grounding_used }, database);
     }
-    artifacts.leads.push({ lead_id: lead.id, company: account.company, dossier, sequence: { touch_count: sequence.touch_count, review_score: sequence.review_score, send_readiness: sequence.send_readiness } });
+    artifacts.leads.push({ lead_id: lead.id, company: account.company, dossier, sequence: { touch_count: sequence.touch_count, review_score: sequence.review_score, send_readiness: sequence.send_readiness, emails: sequence.emails } });
   }
   if (artifactsPath) fs.writeFileSync(artifactsPath, JSON.stringify(artifacts, null, 2) + "\n");
   return artifacts;
@@ -162,7 +180,26 @@ export function evaluateSmokeGates(database = db(), artifactsPath = null, regist
 
   const gnk = report.leads.filter((l) => l.play.startsWith("GNK"));
   const ohub = report.leads.filter((l) => l.play.startsWith("OHUB"));
-  const claimsGrounded = artifacts.leads.every((l) => (l.dossier?.claims_allowed || []).length > 0 && l.dossier?.trigger_source);
+
+  // Strong evidence gate: every claim maps to >=1 source, every source is in the
+  // dossier's approved evidence, every queued message's grounding is non-empty and
+  // a subset of that evidence, and any message that cites out-of-evidence URLs is
+  // NOT ready. Validate against the actual queued messages, not just the dossier.
+  const allMessages = listOutreachMessages({}, database);
+  const claimsGrounded = artifacts.leads.every((l) => {
+    const dossier = l.dossier || {};
+    const approved = new Set(dossier.approved_evidence || []);
+    const claims = dossier.claims || [];
+    const claimsOk = claims.length > 0 && claims.every((c) => (c.source_urls || []).length > 0 && (c.source_urls || []).every((u) => approved.has(u)));
+    const seqOk = groundingSupported(dossier, l.sequence?.emails || []);
+    const msgs = allMessages.filter((m) => m.lead_id === l.lead_id && m.message_type === "sequence_touch");
+    const msgsOk = msgs.length > 0 && msgs.every((m) => {
+      const grounding = (() => { try { return JSON.parse(m.evidence || "[]"); } catch { return []; } })();
+      const supported = grounding.length > 0 && grounding.every((u) => approved.has(u));
+      return supported && (m.review_status === "ready" ? supported : true); // an unsupported msg must not be 'ready'
+    });
+    return claimsOk && seqOk && msgsOk;
+  });
 
   const gates = [
     { gate: "zero send-capable API routes exist", pass: dashboardSrc.includes("(approve|reject|draft)") && !dashboardSrc.includes("sendApprovedDraft(") },

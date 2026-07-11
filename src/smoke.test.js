@@ -12,7 +12,7 @@ process.env.REVENUE_EVENT_SKIP_ONTOLOGY = "1";
 
 const { db, _closeForTest } = await import("./db.js");
 const { readRegistry } = await import("./bus.js");
-const { seedSmokeAccounts, runSmokeFixture, buildSmokeReport, evaluateSmokeGates } = await import("./smoke-harness.js");
+const { seedSmokeAccounts, runSmokeFixture, buildSmokeReport, evaluateSmokeGates, groundingSupported } = await import("./smoke-harness.js");
 const { upsertLeads } = await import("./leads-store.js");
 const { setStage } = await import("./crm-model.js");
 const { approveOutreachCohort, approveOutreachMessage, queueOutreachMessage } = await import("./outreach-queue.js");
@@ -57,6 +57,22 @@ test("GNK yields four touches and OutageHub five", () => {
   const report = buildSmokeReport(db(), artifactsPath);
   assert.ok(report.leads.filter((l) => l.play.startsWith("GNK")).every((l) => l.sequence_touch_count === 4));
   assert.ok(report.leads.filter((l) => l.play.startsWith("OHUB")).every((l) => l.sequence_touch_count === 5));
+});
+
+test("evidence gate: grounding must be non-empty and within the dossier's approved evidence", () => {
+  const dossier = { approved_evidence: ["https://ok.example/a", "https://ok.example/b"] };
+  assert.equal(groundingSupported(dossier, [{ grounding_used: ["https://ok.example/a"] }]), true);
+  assert.equal(groundingSupported(dossier, [{ grounding_used: ["https://evil.example/x"] }]), false, "out-of-evidence URL is unsupported");
+  assert.equal(groundingSupported(dossier, [{ grounding_used: [] }]), false, "empty grounding is unsupported");
+  // Every fixture dossier's claims map to sources inside approved evidence.
+  const artifacts = JSON.parse(fs.readFileSync(artifactsPath, "utf8"));
+  for (const l of artifacts.leads) {
+    const approved = new Set(l.dossier.approved_evidence);
+    assert.ok(l.dossier.claims.length > 0);
+    for (const c of l.dossier.claims) {
+      assert.ok(c.source_urls.length > 0 && c.source_urls.every((u) => approved.has(u)), `claim mapped to approved evidence: ${c.text}`);
+    }
+  }
 });
 
 test("a guessed-email lead cannot reach an approvable message (end-to-end)", async () => {

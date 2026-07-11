@@ -34,24 +34,40 @@ trio on every push/PR.
 ## 2. Manual live-agent mode (operator-selected real accounts)
 
 Run the real agents against six operator-chosen accounts (3 GNK, 3 OutageHub).
-This needs OpenClaw credentials. **It stops at the approval queue** — Gmail draft
-creation is a separate manual action per message after you read it, and there is
-no send path at all.
+This needs OpenClaw credentials. The run is **scoped to a manifest** so it only
+ever touches those six accounts, and **it stops at the approval queue** — Gmail
+draft creation is a separate manual action per message after you read it, and
+there is no send path at all.
 
 ```sh
-# 1. Refresh strategy once (freshness-aware; skips fresh artifacts)
+# 1. Author the manifest: exactly 3 GNK + 3 OutageHub, one per active play,
+#    each with a company domain and proposed buyer. Start from the template:
+cp data/inputs/live-smoke-accounts.example.json data/inputs/live-smoke-accounts.json
+$EDITOR data/inputs/live-smoke-accounts.json
+
+# 2. Validate + seed the isolated cohort groups (gnk-live-smoke / outagehub-live-smoke).
+#    Fails if the manifest is off or any non-manifest lead would leak in.
+npm run smoke:live:init -- --manifest data/inputs/live-smoke-accounts.json
+
+# 3. Refresh strategy once (freshness-aware; skips fresh artifacts)
 npm run strategy:refresh -- gnk
 npm run strategy:refresh -- outagehub
 
-# 2. Build each cohort (cohort-tier agents: sourcing, scoring, buyer, contact/evidence)
-npm run pipeline -- cohort:build gnk
-npm run pipeline -- cohort:build outagehub
+# 4. Build each cohort, SCOPED to the manifest group
+npm run pipeline -- cohort:build gnk --cohort gnk-live-smoke
+npm run pipeline -- cohort:build outagehub --cohort outagehub-live-smoke
 
-# 3. Approve each cohort (one play per cohort) in the dashboard Approvals view,
-#    then prepare leads (Commercial Dossier -> unified writer -> reviewer)
-npm run pipeline -- lead:prepare gnk
-npm run pipeline -- lead:prepare outagehub
+# 5. Approve each cohort in the dashboard Approvals view, then prepare leads
+#    (Commercial Dossier -> unified writer -> reviewer). In live-smoke mode
+#    lead:prepare FAILS CLOSED unless a --cohort is given.
+npm run pipeline -- lead:prepare gnk --cohort gnk-live-smoke
+npm run pipeline -- lead:prepare outagehub --cohort outagehub-live-smoke
 ```
+
+Presence of `data/inputs/live-smoke-accounts.json` (or `LIVE_SMOKE=1`) turns on
+live-smoke mode. The `--cohort` scope limits each agent's lead context to the
+manifest accounts and injects an allow-list constraint; the approval queue is
+hard-scoped because the live cohort group contains only manifest leads.
 
 Then inspect, in the dashboard:
 

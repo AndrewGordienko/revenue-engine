@@ -19,6 +19,7 @@ import { readMemoryEvents, reduceLeadMemory } from "./lead-memory.js";
 import { fromRoot } from "./paths.js";
 import { PORTFOLIO_STRATEGY, SALES_PLAYS, SEQUENCE_POLICIES, STRATEGY_VERSION } from "./sales-plays.js";
 import { sequenceSkeleton } from "./sequence-skeleton.js";
+import { filterLeadsToScope, buildLiveScopeBlock, liveScopePrefix } from "./smoke-live.js";
 
 // Agents that do live public web research and benefit from querying several
 // search engines and combining the results (multi-search-engine skill).
@@ -80,7 +81,7 @@ function commercialTargetFor(registry, agent) {
 
 async function buildExclusionBlock(agent) {
   if (!isDedupAwareAgent(agent)) return "";
-  const leads = await readLeads(productForAgent(agent));
+  const leads = filterLeadsToScope(await readLeads(productForAgent(agent)));
   if (!leads.length) return "";
   const known_companies = [...new Set(leads.map((l) => l.company).filter(Boolean))];
   const known_people = [...new Set(leads.map((l) => l.name).filter(Boolean))];
@@ -560,7 +561,7 @@ async function buildLeadMemoryBlock(agent) {
   }
   if (!events.length) return "";
 
-  const leads = await readLeads(product);
+  const leads = filterLeadsToScope(await readLeads(product));
   const byId = new Map(leads.map((lead) => [lead.id, lead]));
   const byLead = {};
   for (const event of events) (byLead[event.lead_id] ||= []).push(event);
@@ -631,10 +632,12 @@ async function buildPrompt(registry, agent) {
   const commercialStrategyBlock = buildCommercialStrategyBlock(agent);
   const ontologyBlock = await buildOntologyBlock(agent);
   const leadMemoryBlock = await buildLeadMemoryBlock(agent);
+  const liveScopeBlock = liveScopePrefix() ? buildLiveScopeBlock(await readLeads(productForAgent(agent))) : "";
 
   return [
     instructions,
     commercialStrategyBlock,
+    liveScopeBlock,
     multiSearchBlock,
     ontologyBlock,
     leadMemoryBlock,

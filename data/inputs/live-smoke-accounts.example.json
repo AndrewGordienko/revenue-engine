@@ -1,0 +1,11 @@
+{
+  "_comment": "Template for the manual live-agent smoke. Copy to live-smoke-accounts.json and replace with six REAL operator-chosen accounts. Must be exactly 3 GNK + 3 OutageHub, one per active play, each with a company domain and a proposed buyer.",
+  "accounts": [
+    { "product": "gnk", "play_id": "GNK-AI-01", "company": "Example AI Co", "domain": "example-ai.example", "buyer": "Jane Doe", "buyer_title": "VP Engineering", "trigger": "launched an AI workflow product", "trigger_source": "https://example-ai.example/blog/launch" },
+    { "product": "gnk", "play_id": "GNK-BE-01", "company": "Example Platform Co", "domain": "example-platform.example", "buyer": "John Roe", "buyer_title": "VP Engineering", "trigger": "public incident + reliability migration", "trigger_source": "https://example-platform.example/status" },
+    { "product": "gnk", "play_id": "GNK-DATA-01", "company": "Example Ops Co", "domain": "example-ops.example", "buyer": "Alex Poe", "buyer_title": "COO", "trigger": "manual multi-system reconciliation workflow", "trigger_source": "https://example-ops.example/careers/ops" },
+    { "product": "outagehub", "play_id": "OHUB-ISP-01", "company": "Example ISP", "domain": "example-isp.example", "buyer": "Dana Coe", "buyer_title": "NOC Manager", "trigger": "regional footprint expansion + outage triage load", "trigger_source": "https://example-isp.example/careers/noc" },
+    { "product": "outagehub", "play_id": "OHUB-EMBED-01", "company": "Example Facilities SaaS", "domain": "example-facsaas.example", "buyer": "Robin Moe", "buyer_title": "VP Product", "trigger": "Canadian facilities roadmap needing power-event context", "trigger_source": "https://example-facsaas.example/roadmap" },
+    { "product": "outagehub", "play_id": "OHUB-FAC-01", "company": "Example Cold Storage", "domain": "example-cold.example", "buyer": "Morgan Boe", "buyer_title": "Facilities Director", "trigger": "multi-site cold-storage outage escalation gaps", "trigger_source": "https://example-cold.example/news" }
+  ]
+}
