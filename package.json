@@ -83,7 +83,8 @@
     "draft-only:test": "node --test src/draft-only.test.js",
     "acceptance": "node src/run-acceptance.js",
     "benchmark:build": "node benchmark/build-fixtures.mjs",
-    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js src/smoke-live.test.js"
+    "promote:sequences": "node src/promote-sequences.js",
+    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js src/smoke-live.test.js src/promote-sequences.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
