@@ -35,6 +35,8 @@ test("failure classification: conflicts stop, transient retries, unknown stops",
   assert.equal(classifyFailure("cross-cohort input: lead 7 is ..."), "conflict");
   assert.equal(classifyFailure("model is at capacity, try again (429)"), "transient");
   assert.equal(classifyFailure("ECONNRESET socket hang up"), "transient");
+  assert.equal(classifyFailure("Expected double-quoted property name in JSON at position 2550"), "transient");
+  assert.equal(classifyFailure("agent instructions mention identity and evidence, then ETIMEDOUT"), "transient");
   assert.equal(classifyFailure("TypeError: undefined is not a function"), "error");
 });
 

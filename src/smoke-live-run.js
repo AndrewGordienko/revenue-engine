@@ -77,8 +77,14 @@ export function interruptActiveRun(signal = "SIGTERM") {
 }
 
 // ---- classification of a failed pipeline subprocess -------------------------
-const CONFLICT_RE = /FAILED CLOSED|play consistency|invalid .*manifest|cross-cohort|strategy_version mismatch|identity|evidence|contains non-manifest|lineage/i;
-const TRANSIENT_RE = /capacity|rate.?limit|temporarily unavailable|overloaded|\b429\b|ETIMEDOUT|ECONNRESET|ECONNREFUSED|network|socket hang up|timed out/i;
+// Match only an explicit hard-gate failure. Agent prompts routinely contain words
+// such as "identity", "evidence", and "lineage", so treating their mere
+// presence in captured stdout as a conflict would turn harmless model failures
+// into false human blockers.
+const CONFLICT_RE = /FAILED CLOSED|play consistency|invalid .*manifest|cross-cohort|strategy_version mismatch|(?:identity|evidence|contact) (?:conflict|mismatch|validation|gate failed)|lineage (?:conflict|mismatch|validation)|contains non-manifest/i;
+// Model-format errors are retryable just like a rate limit: the source material
+// and gates are unchanged, and a fresh completion can produce valid JSON.
+const TRANSIENT_RE = /capacity|rate.?limit|temporarily unavailable|overloaded|\b429\b|ETIMEDOUT|ECONNRESET|ECONNREFUSED|network|socket hang up|timed out|Expected double-quoted property name in JSON|Agent response did not contain a JSON object/i;
 export function classifyFailure(text) {
   if (CONFLICT_RE.test(text)) return "conflict";   // human judgment required — stop
   if (TRANSIENT_RE.test(text)) return "transient"; // safe to retry
