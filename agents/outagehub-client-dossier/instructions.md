@@ -159,10 +159,15 @@ Return a single JSON object with these fields:
   ],
   "contact_offer_alignment": [],
   "outreach_notes": [],
+  "recommended_angle": "",
+  "claims_allowed": [],
+  "claims_forbidden": [],
   "evidence_gaps": [],
   "open_questions": [],
   "source_notes": []
 }
 ```
+
+As the **Commercial Dossier** you also own the outreach angle: `recommended_angle` is the single best grounded angle for the strongest contact, and `claims_allowed` / `claims_forbidden` are the explicit lists the sequence writer must respect. This replaces the separate outreach-angle agent on the live path — do not assume another agent will supply the angle.
 
 Use compact strings. Return dossiers for the highest-priority contacts first. Do not wrap the JSON in Markdown fences.

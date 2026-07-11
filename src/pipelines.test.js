@@ -5,6 +5,7 @@ import path from "node:path";
 
 const { selectPipelineAgents, planPipeline, isAgentFresh } = await import("./pipelines.js");
 const { STRATEGY_VERSION } = await import("./sales-plays.js");
+const { sequenceSkeleton } = await import("./sequence-skeleton.js");
 
 const registry = JSON.parse(fs.readFileSync(path.join(process.cwd(), "agents", "registry.json"), "utf8"));
 
@@ -28,6 +29,29 @@ test("cohort:build selects the four cohort-tier agents for the brand", () => {
   assert.deepEqual(slugs.sort(), [
     "outagehub-account-scoring", "outagehub-account-sourcing", "outagehub-contact-discovery", "outagehub-email-finder",
   ]);
+});
+
+test("sequence skeleton is deterministic and matches each brand's binding policy", () => {
+  const gnk = sequenceSkeleton("gnk");
+  assert.equal(gnk.touch_count, 4);
+  assert.deepEqual(gnk.send_days, [1, 4, 10, 18]);
+  assert.deepEqual(gnk.touches.map((t) => t.touch_key), ["trigger_and_outcome", "useful_point_of_view", "method_or_shaping", "router_close"]);
+  const ohub = sequenceSkeleton("outagehub");
+  assert.equal(ohub.touch_count, 5);
+  assert.deepEqual(ohub.send_days, [1, 4, 9, 16, 25]);
+  assert.equal(ohub.touches.at(-1).touch_key, "router_close");
+  assert.deepEqual(sequenceSkeleton("gnk"), gnk, "same input yields identical skeleton (deterministic)");
+});
+
+test("no critical-path agent depends on an off-live-path agent", () => {
+  const bySlug = new Map(registry.agents.map((a) => [a.slug, a]));
+  const offPath = (agent) => agent.executionTier === "deterministic" || (agent.executionTier === "lead" && !agent.criticalPath);
+  for (const agent of registry.agents.filter((a) => a.criticalPath)) {
+    for (const dep of agent.dependsOn || []) {
+      const upstream = bySlug.get(dep);
+      assert.ok(upstream && !offPath(upstream), `${agent.slug} (critical) must not depend on off-path ${dep}`);
+    }
+  }
 });
 
 test("strategy refresh skips fresh agents and reruns stale/off-version ones", () => {

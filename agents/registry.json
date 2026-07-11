@@ -599,7 +599,7 @@
       "id": "salesv3-gnk-client-dossier",
       "slug": "gnk-client-dossier",
       "name": "GNK Client Dossier",
-      "role": "Combine contact discovery and offer maps into detailed account/contact notes for outbound sales.",
+      "role": "Commercial Dossier: synthesize company, person, role, trigger, owned workflow, buyer/router, problem hypothesis, offer, first outcome, proof available/missing, contact evidence, allowed/forbidden claims, and the recommended angle in one output.",
       "sequence": 10,
       "dependsOn": [
         "gnk-contact-discovery",
@@ -622,7 +622,10 @@
         "outreach_notes",
         "evidence_gaps",
         "open_questions",
-        "source_notes"
+        "source_notes",
+        "recommended_angle",
+        "claims_allowed",
+        "claims_forbidden"
       ],
       "execution": "api-key",
       "timeoutSeconds": 1800,
@@ -638,7 +641,7 @@
       "id": "salesv3-gnk-outreach-angle",
       "slug": "gnk-outreach-angle",
       "name": "GNK Outreach Angle",
-      "role": "Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "role": "[Superseded — off the live path] Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
       "sequence": 11,
       "dependsOn": [
         "gnk-client-dossier",
@@ -684,7 +687,7 @@
       "id": "salesv3-gnk-sequence-strategy",
       "slug": "gnk-sequence-strategy",
       "name": "GNK Sequence Strategy",
-      "role": "Design the 5-7 email outbound sequence strategy so each touch advances the conversation without becoming spam.",
+      "role": "[Superseded — off the live path] Legacy sequence-shape strategist; sequence shape is now generated deterministically from SEQUENCE_POLICIES.",
       "sequence": 12,
       "dependsOn": [
         "gnk-outreach-angle",
@@ -735,7 +738,6 @@
       "role": "Infer each company's email format from public evidence and produce likely email candidates for CRM leads.",
       "sequence": 13,
       "dependsOn": [
-        "gnk-outreach-angle",
         "gnk-contact-discovery",
         "gnk-revenue-strategy",
         "gnk-pipeline-capacity"
@@ -765,12 +767,10 @@
       "id": "salesv3-gnk-email-drafter",
       "slug": "gnk-email-drafter",
       "name": "GNK Email Drafter",
-      "role": "Draft human-ready first-touch outreach emails from the company outreach maps, preserving grounded trigger context and a low-pressure founder tone.",
+      "role": "Unified sequence writer: produce the complete four-touch per-person sequence on the deterministic skeleton, grounded in the Commercial Dossier and verified contact.",
       "sequence": 14,
       "dependsOn": [
-        "gnk-sequence-strategy",
         "gnk-email-finder",
-        "gnk-outreach-angle",
         "gnk-client-dossier",
         "gnk-contact-discovery",
         "gnk-boutique-growth-playbook",
@@ -788,10 +788,11 @@
         "https://www.gnk.software/"
       ],
       "outputs": [
-        "draft_summary",
-        "company_email_drafts",
+        "sequence_draft_summary",
+        "person_email_sequences",
+        "company_sequence_maps",
         "recommended_send_order",
-        "style_rules",
+        "global_send_rules",
         "claims_to_avoid",
         "source_notes"
       ],
@@ -809,7 +810,7 @@
       "id": "salesv3-gnk-email-sequence-drafter",
       "slug": "gnk-email-sequence-drafter",
       "name": "GNK Email Sequence Drafter",
-      "role": "Draft four-touch, high-trust GNK sequences that use trigger evidence, buyer context, the selected sprint, and the approved first-touch voice.",
+      "role": "[Superseded — off the live path] Draft four-touch, high-trust GNK sequences that use trigger evidence, buyer context, the selected sprint, and the approved first-touch voice.",
       "sequence": 15,
       "dependsOn": [
         "gnk-email-drafter",
@@ -855,14 +856,11 @@
       "id": "salesv3-gnk-email-sequence-reviewer",
       "slug": "gnk-email-sequence-reviewer",
       "name": "GNK Email Sequence Reviewer",
-      "role": "Review and improve four-touch GNK sequences against evidence, trust, sprint fit, progression, and contact-route controls.",
+      "role": "Adversarial reviewer: verify grounding, trust, buyer fit, progression, and risk on the unified writer's four-touch sequences; only 'ready' passes.",
       "sequence": 16,
       "dependsOn": [
-        "gnk-email-sequence-drafter",
         "gnk-email-drafter",
-        "gnk-sequence-strategy",
         "gnk-email-finder",
-        "gnk-outreach-angle",
         "gnk-client-dossier",
         "gnk-contact-discovery",
         "gnk-boutique-growth-playbook",
@@ -1388,7 +1386,7 @@
       "id": "salesv3-outagehub-client-dossier",
       "slug": "outagehub-client-dossier",
       "name": "OutageHub Client Dossier",
-      "role": "Combine contact discovery and offer maps into detailed account/contact notes for outbound sales.",
+      "role": "Commercial Dossier: synthesize company, person, role, trigger, owned workflow, buyer/router, problem hypothesis, offer, first outcome, proof available/missing, contact evidence, allowed/forbidden claims, and the recommended angle in one output.",
       "sequence": 111,
       "dependsOn": [
         "outagehub-contact-discovery",
@@ -1415,7 +1413,10 @@
         "outreach_notes",
         "evidence_gaps",
         "open_questions",
-        "source_notes"
+        "source_notes",
+        "recommended_angle",
+        "claims_allowed",
+        "claims_forbidden"
       ],
       "commercialTargetKey": "outagehub",
       "productName": "OutageHub",
@@ -1434,7 +1435,7 @@
       "id": "salesv3-outagehub-outreach-angle",
       "slug": "outagehub-outreach-angle",
       "name": "OutageHub Outreach Angle",
-      "role": "Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "role": "[Superseded — off the live path] Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
       "sequence": 112,
       "dependsOn": [
         "outagehub-client-dossier",
@@ -1487,7 +1488,7 @@
       "id": "salesv3-outagehub-sequence-strategy",
       "slug": "outagehub-sequence-strategy",
       "name": "OutageHub Sequence Strategy",
-      "role": "Design the 5-7 email outbound sequence strategy so each touch advances the conversation without becoming spam.",
+      "role": "[Superseded — off the live path] Legacy sequence-shape strategist; sequence shape is now generated deterministically from SEQUENCE_POLICIES.",
       "sequence": 113,
       "dependsOn": [
         "outagehub-outreach-angle",
@@ -1545,7 +1546,6 @@
       "role": "Infer each company's email format from public evidence and produce likely email candidates for CRM leads.",
       "sequence": 114,
       "dependsOn": [
-        "outagehub-outreach-angle",
         "outagehub-contact-discovery",
         "outagehub-revenue-strategy",
         "outagehub-pipeline-capacity",
@@ -1582,12 +1582,10 @@
       "id": "salesv3-outagehub-email-drafter",
       "slug": "outagehub-email-drafter",
       "name": "OutageHub Email Drafter",
-      "role": "Draft human-ready first-touch outreach emails from the company outreach maps, preserving grounded trigger context and a low-pressure founder tone.",
+      "role": "Unified sequence writer: produce the complete five-touch per-person sequence on the deterministic skeleton, grounded in the Commercial Dossier and verified contact.",
       "sequence": 115,
       "dependsOn": [
-        "outagehub-sequence-strategy",
         "outagehub-email-finder",
-        "outagehub-outreach-angle",
         "outagehub-client-dossier",
         "outagehub-contact-discovery",
         "outagehub-boutique-growth-playbook",
@@ -1609,10 +1607,11 @@
         "https://www.outagehub.ca/developers/notifications"
       ],
       "outputs": [
-        "draft_summary",
-        "company_email_drafts",
+        "sequence_draft_summary",
+        "person_email_sequences",
+        "company_sequence_maps",
         "recommended_send_order",
-        "style_rules",
+        "global_send_rules",
         "claims_to_avoid",
         "source_notes"
       ],
@@ -1633,7 +1632,7 @@
       "id": "salesv3-outagehub-email-sequence-drafter",
       "slug": "outagehub-email-sequence-drafter",
       "name": "OutageHub Email Sequence Drafter",
-      "role": "Draft five-touch OutageHub paid-pilot sequences tied to one operational decision, proof path, implementation boundary, and annual conversion.",
+      "role": "[Superseded — off the live path] Draft five-touch OutageHub paid-pilot sequences tied to one operational decision, proof path, implementation boundary, and annual conversion.",
       "sequence": 116,
       "dependsOn": [
         "outagehub-email-drafter",
@@ -1686,14 +1685,11 @@
       "id": "salesv3-outagehub-email-sequence-reviewer",
       "slug": "outagehub-email-sequence-reviewer",
       "name": "OutageHub Email Sequence Reviewer",
-      "role": "Review and improve five-touch OutageHub sequences against workflow evidence, paid-pilot integrity, annual expansion, and contact-route controls.",
+      "role": "Adversarial reviewer: verify grounding, trust, buyer fit, progression, and risk on the unified writer's five-touch sequences; only 'ready' passes.",
       "sequence": 117,
       "dependsOn": [
-        "outagehub-email-sequence-drafter",
         "outagehub-email-drafter",
-        "outagehub-sequence-strategy",
         "outagehub-email-finder",
-        "outagehub-outreach-angle",
         "outagehub-client-dossier",
         "outagehub-contact-discovery",
         "outagehub-boutique-growth-playbook",

@@ -408,7 +408,10 @@ function norm(value) {
 
 function sequenceForLead(lead) {
   const reviewedSequences = productArtifact("email-sequence-reviewer")?.improved_person_email_sequences || [];
-  const draftSequences = productArtifact("email-sequence-drafter")?.person_email_sequences || [];
+  // The unified writer (email-drafter) is the current source; the legacy
+  // sequence-drafter is a fallback for pre-consolidation artifacts.
+  const draftSequences = productArtifact("email-drafter")?.person_email_sequences
+    || productArtifact("email-sequence-drafter")?.person_email_sequences || [];
   const source = reviewedSequences.length ? "reviewed" : "draft";
   const sequences = source === "reviewed" ? reviewedSequences : draftSequences;
   const leadCompany = norm(lead.company);
