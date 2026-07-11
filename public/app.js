@@ -2164,6 +2164,76 @@ function renderActivity() {
   return el;
 }
 
+/* ---------- page: Run live smoke ---------- */
+// Calls the SAME canonical orchestrator as the CLI (`npm run smoke:live`) and the
+// OpenClaw controller. Draft-only: it stops at human approval and never sends.
+let smokeLivePoll = null;
+
+function smokeStageRow(s) {
+  const badge = { ok: "good", skipped: "muted", running: "warn", blocked: "bad", pending: "muted" }[s.status] || "muted";
+  return h("div", { class: "act-row" }, [
+    h("strong", { class: `pill ${badge}`, text: s.status || "pending" }),
+    h("div", {}, [
+      h("strong", { class: "act-title", text: s.key }),
+      h("p", { class: "act-body", text: [s.detail, s.error, s.attempts ? `attempts: ${s.attempts}` : ""].filter(Boolean).join(" · ") || "" })
+    ])
+  ]);
+}
+
+function renderLiveSmoke() {
+  const el = h("section", { class: "page" });
+  const panel = h("div", {});
+  el.append(pageHead("Ops", "Run live smoke", "Six-account canonical orchestrator · draft-only, human-gated", null));
+
+  const refresh = async () => {
+    let data = {};
+    try { data = await fetch("/api/smoke-live").then((r) => r.json()); } catch { data = { error: "unreachable" }; }
+    const pf = data.preflight || {};
+    const st = data.status || {};
+    const running = Boolean(data.running);
+
+    const controls = h("div", { class: "row gap" }, [
+      h("button", {
+        class: "btn primary", disabled: running || (pf && pf.ok === false) ? true : undefined,
+        text: running ? "Running…" : (st && st.blockers && st.blockers.length ? "Resume run" : "Run live smoke"),
+        onclick: async () => { await apiPost("/api/smoke-live"); setTimeout(refresh, 500); }
+      }),
+      h("span", { class: "muted", text: running ? `stage: ${st.current_stage || "…"}${st.current_agent ? ` · agent: ${st.current_agent}` : ""} · ${Math.round((st.elapsed_ms || 0) / 1000)}s` : (pf.ok ? "preflight OK — ready" : "preflight blocked") })
+    ]);
+
+    // Preflight / credential readiness.
+    const pfBox = h("div", { class: "card" }, [
+      h("strong", { text: "Preflight" }),
+      ...((pf.checks || []).map((c) => h("p", { class: c.ok ? "good" : "bad", text: `${c.ok ? "✓" : "✕"} ${c.name}: ${c.detail}${c.missing ? ` — missing: ${c.missing}` : ""}` })))
+    ]);
+
+    // Stages + blockers + report.
+    const stagesBox = h("div", { class: "card" }, [h("strong", { text: "Stages" }), ...((st.stages || []).map(smokeStageRow))]);
+    const blockers = (st.blockers || []);
+    const blockersBox = h("div", { class: "card" }, [
+      h("strong", { text: `Blockers (${blockers.length})` }),
+      ...(blockers.length ? blockers.map((b) => h("p", { class: "bad", text: `[${b.type}${b.human ? `/${b.human}` : ""}] ${typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail)}` })) : [h("p", { class: "muted", text: "none" })])
+    ]);
+    const rep = st.report;
+    const reportBox = h("div", { class: "card" }, [
+      h("strong", { text: "Result" }),
+      rep
+        ? h("p", { class: rep.draft_only_intact ? "good" : "bad", text: `loop_complete ${rep.loop_complete_accounts}/${rep.of} · draft-only ${rep.draft_only_intact ? "intact" : "VIOLATED"} · won ${rep.won_accounts} (won = signed contract only)` })
+        : h("p", { class: "muted", text: "no completed run yet" })
+    ]);
+
+    panel.replaceChildren(controls, pfBox, stagesBox, blockersBox, reportBox);
+
+    // Poll while a run is active; stop when idle or the view changes.
+    if (smokeLivePoll) { clearTimeout(smokeLivePoll); smokeLivePoll = null; }
+    if (running && state.view === "live-smoke") smokeLivePoll = setTimeout(refresh, 3000);
+  };
+
+  refresh();
+  el.append(panel);
+  return el;
+}
+
 /* ---------- page: Agent Health ---------- */
 const TIER_ORDER = ["lead", "cohort", "control", "deterministic"];
 const TIER_LABEL = { lead: "Lead (per-lead live path)", cohort: "Cohort (per approved cohort)", control: "Control (weekly/monthly strategy)", deterministic: "Deterministic (code, off live path)" };
@@ -2239,12 +2309,14 @@ function render() {
     agents: renderAgentHealth,
     calendar: renderCalendar,
     intelligence: renderIntelligence,
-    activity: renderActivity
+    activity: renderActivity,
+    "live-smoke": renderLiveSmoke
   };
+  if (state.view !== "live-smoke" && smokeLivePoll) { clearTimeout(smokeLivePoll); smokeLivePoll = null; }
   stageEl.replaceChildren((views[state.view] || renderOverview)());
 }
 
-const VIEWS = new Set(["overview", "leads", "outreach", "approvals", "agents", "calendar", "intelligence", "activity"]);
+const VIEWS = new Set(["overview", "leads", "outreach", "approvals", "agents", "calendar", "intelligence", "activity", "live-smoke"]);
 
 function go(view, opts = {}) {
   state.view = view;

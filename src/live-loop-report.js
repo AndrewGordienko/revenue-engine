@@ -1,17 +1,17 @@
 // live-loop-report.js — the "prove it" instrument for the six-account real loop.
 //
 // Given the live-smoke manifest (six operator-chosen real accounts), report where
-// each one actually stands in the canonical CRM: is the lead present, does it carry
-// a play, is there a dossier + reviewed sequence artifact for it, how many touches
-// are queued for approval, and is anything approved/sent. This is what the operator
-// runs after `run-pipeline.js full <product> --cohort <group>` to confirm the loop
-// closed with NO manual JSON copying and NO database repair.
+// each one actually stands in the canonical CRM: lead present, play assigned,
+// dossier + reviewed sequence artifact, queued touches, and its lifecycle stage.
+// Reporting uses the loop-status vocabulary — "loop_complete" means the automated
+// prep loop reached the human-approval gate; it is NOT a closed/won deal.
 import { db } from "./db.js";
 import { readState } from "./bus.js";
 import { getLead, sendEligibility } from "./crm-model.js";
 import { getCohort } from "./lineage.js";
 import { loadManifest, cohortIdFor } from "./smoke-live.js";
 import { checkPlayConsistency } from "./play-consistency.js";
+import { accountStage, isLoopComplete, cohortApprovalStatus, STAGES as STAGE_ORDER } from "./loop-status.js";
 import { normalizeProduct } from "./lineage.js";
 
 const norm = (v) => String(v || "").toLowerCase().trim();
@@ -49,41 +49,45 @@ export async function buildLiveLoopReport(database = db(), manifest = loadManife
       : [];
     const artifacts = artifactMentions(state, product, account.company);
     const eligibility = lead ? sendEligibility(database, lead, { allow_active_sequence: true }) : { ok: false, blocked: ["no_lead"] };
+    const stage = accountStage(database, lead, { reviewedSequence: artifacts.reviewed_sequence });
     return {
       company: account.company, play: account.play_id, product,
       lead_present: Boolean(lead),
       play_assigned: lead?.play_id || null,
       play_status: playStatus.get(account.domain) || "unknown",
-      crm_stage: lead?.crm_stage || lead?.stage || null,
-      cohort_status: cohort?.status || "missing",
+      stage,
+      loop_complete: isLoopComplete(stage),
+      cohort_approval: cohortApprovalStatus(database, lead),
       dossier_artifact: artifacts.dossier,
       reviewed_sequence_artifact: artifacts.reviewed_sequence,
-      queued: messages.filter((m) => m.status === "pending_approval").length,
+      pending_approval: messages.filter((m) => m.status === "pending_approval").length,
       approved: messages.filter((m) => m.status === "approved").length,
       sent: messages.filter((m) => m.status === "sent" || m.status === "provider_draft").length,
       send_blockers: eligibility.blocked,
     };
   });
 
+  const stageCounts = Object.fromEntries(STAGE_ORDER.map((s) => [s, rows.filter((r) => r.stage === s).length]));
   const totals = {
     accounts: rows.length,
     leads_present: rows.filter((r) => r.lead_present).length,
     with_play: rows.filter((r) => r.play_assigned).length,
-    with_reviewed_sequence: rows.filter((r) => r.reviewed_sequence_artifact).length,
-    messages_queued: rows.reduce((n, r) => n + r.queued, 0),
+    loop_complete: rows.filter((r) => r.loop_complete).length,
+    stages: stageCounts,
+    pending_approval: rows.reduce((n, r) => n + r.pending_approval, 0),
     approved: rows.reduce((n, r) => n + r.approved, 0),
     sent: rows.reduce((n, r) => n + r.sent, 0),
+    won: rows.filter((r) => r.stage === "won").length,
   };
-  // The loop is "closed" for an account when a real reviewed-sequence artifact
-  // produced pending-approval messages against a play-assigned lead — with nothing
-  // approved or sent (draft-only).
-  const closed = rows.filter((r) => r.reviewed_sequence_artifact && r.queued > 0 && r.play_assigned);
   return {
     generated_at: new Date().toISOString(),
     verdict: {
-      loop_closed_accounts: closed.length,
+      // loop_complete = the automated prep loop reached the human-approval gate.
+      // NOT a closed/won deal — "won" means a signed contract only.
+      loop_complete_accounts: totals.loop_complete,
       of: rows.length,
       draft_only_intact: totals.approved === 0 && totals.sent === 0,
+      won_accounts: totals.won,
     },
     totals,
     accounts: rows,
@@ -91,18 +95,18 @@ export async function buildLiveLoopReport(database = db(), manifest = loadManife
 }
 
 function printReport(report) {
-  console.log(`\nLive-loop status — ${report.verdict.loop_closed_accounts}/${report.verdict.of} accounts closed, draft-only ${report.verdict.draft_only_intact ? "intact" : "VIOLATED"}\n`);
-  const col = (v, n) => String(v ?? "").padEnd(n);
-  console.log(col("COMPANY", 16) + col("PLAY", 13) + col("RECON", 10) + col("LEAD", 6) + col("DOSSIER", 9) + col("SEQ", 5) + col("QUEUED", 8) + col("APPR", 6) + col("SENT", 6));
+  const v = report.verdict;
+  console.log(`\nLive-loop status — ${v.loop_complete_accounts}/${v.of} loop_complete (prepared → pending_approval), draft-only ${v.draft_only_intact ? "intact" : "VIOLATED"}, won ${v.won_accounts}\n`);
+  const col = (val, n) => String(val ?? "").padEnd(n);
+  console.log(col("COMPANY", 16) + col("PLAY", 13) + col("RECON", 10) + col("STAGE", 17) + col("COHORT", 10) + col("PENDING", 9) + col("APPR", 6) + col("SENT", 6));
   for (const r of report.accounts) {
     console.log(
-      col(r.company, 16) + col(r.play, 13) + col(r.play_status, 10) + col(r.lead_present ? "yes" : "—", 6) +
-      col(r.dossier_artifact ? "yes" : "—", 9) +
-      col(r.reviewed_sequence_artifact ? "yes" : "—", 5) + col(r.queued, 8) +
-      col(r.approved, 6) + col(r.sent, 6)
+      col(r.company, 16) + col(r.play, 13) + col(r.play_status, 10) + col(r.stage, 17) +
+      col(r.cohort_approval, 10) + col(r.pending_approval, 9) + col(r.approved, 6) + col(r.sent, 6)
     );
   }
-  console.log(`\ntotals: ${JSON.stringify(report.totals)}`);
+  console.log(`\nstages: ${JSON.stringify(report.totals.stages)}`);
+  console.log(`(loop_complete = automated prep reached the approval gate; won = signed contract only)`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

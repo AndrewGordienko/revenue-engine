@@ -86,7 +86,12 @@
     "promote:sequences": "node src/promote-sequences.js",
     "loop:report": "node src/live-loop-report.js",
     "play:check": "node src/play-consistency.js",
-    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js src/smoke-live.test.js src/promote-sequences.test.js src/live-loop-report.test.js src/play-consistency.test.js"
+    "smoke:live": "node src/smoke-live-run.js",
+    "controller:install": "node src/revenue-controller.js install",
+    "controller:status": "node src/revenue-controller.js status",
+    "controller:run": "node src/revenue-controller.js run",
+    "controller:remove": "node src/revenue-controller.js remove",
+    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js src/smoke-live.test.js src/promote-sequences.test.js src/live-loop-report.test.js src/play-consistency.test.js src/smoke-live-run.test.js"
   },
   "engines": {
     "node": ">=22.5.0"

@@ -16,6 +16,7 @@ import { GmailProvider, GoogleCalendarProvider, googleWorkspaceStatus } from "./
 import { OUTBOUND_SENDING_SUPPORTED } from "./outbound-guard.js";
 import { buildAgentHealth } from "./agent-health.js";
 import { bookMeeting, buildCallBrief, listMeetings, proposeMeetingTimes } from "./meetings.js";
+import { preflight as smokeLivePreflight, readSmokeStatus } from "./smoke-live-run.js";
 
 const preferredPort = Number(process.env.PORT || 8792);
 const maxPort = preferredPort + 20;
@@ -194,9 +195,42 @@ function triggerPipeline(response, product = "gnk") {
   sendJson(response, 202, { ok: true, startedAt: activeRun.startedAt, slug: activeRun.slug });
 }
 
+// The "Run live smoke" dashboard action. Starts the SAME canonical orchestrator
+// the CLI and the OpenClaw controller run (src/smoke-live-run.js -> runSmokeLive),
+// which writes its live status to data/artifacts/smoke-live-status.json. Draft-only
+// and human-gated: the orchestrator never approves a cohort/message or sends.
+let smokeLiveChild = null;
+async function smokeLiveState() {
+  const status = readSmokeStatus();
+  let preflight = null;
+  try { preflight = await smokeLivePreflight(); } catch (error) { preflight = { ok: false, error: error.message }; }
+  const running = Boolean(smokeLiveChild) || Boolean(status?.active);
+  return { running, preflight, status };
+}
+function startSmokeLive(response) {
+  if (smokeLiveChild || readSmokeStatus()?.active) {
+    sendJson(response, 409, { ok: false, error: "A live-smoke run is already active." });
+    return;
+  }
+  const child = spawn("node", ["src/smoke-live-run.js"], { cwd: fromRoot(), stdio: ["ignore", "ignore", "ignore"], detached: false });
+  smokeLiveChild = child;
+  child.on("close", () => { smokeLiveChild = null; });
+  child.on("error", () => { smokeLiveChild = null; });
+  sendJson(response, 202, { ok: true, started: true });
+}
+
 const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
+
+    if (url.pathname === "/api/smoke-live" && request.method === "GET") {
+      sendJson(response, 200, await smokeLiveState());
+      return;
+    }
+    if (url.pathname === "/api/smoke-live" && request.method === "POST") {
+      startSmokeLive(response);
+      return;
+    }
 
     if (url.pathname === "/api/state") {
       sendJson(response, 200, await readState());
