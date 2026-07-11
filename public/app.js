@@ -87,7 +87,8 @@ const state = {
   cohorts: [],
   integrations: {},
   meetingProposals: {},
-  callBriefs: {}
+  callBriefs: {},
+  agentHealth: { summary: {}, agents: [] }
 };
 
 const stageEl = document.querySelector("#stage");
@@ -254,7 +255,7 @@ async function copyText(text, message = "Copied") {
 /* ---------- data ---------- */
 async function load() {
   applyProductChrome();
-  const [registry, bus, messages, runStatus, leads, memorySummary, pipelineReport, outreachQueue, cohorts, integrations] = await Promise.all([
+  const [registry, bus, messages, runStatus, leads, memorySummary, pipelineReport, outreachQueue, cohorts, integrations, agentHealth] = await Promise.all([
     fetch("/api/agents").then((r) => r.json()),
     fetch("/api/state").then((r) => r.json()),
     fetch("/api/messages?limit=60").then((r) => r.json()),
@@ -264,7 +265,8 @@ async function load() {
     fetch("/api/pipeline-report").then((r) => r.json()).catch(() => ({ products: [], cohorts: [] })),
     fetch(productUrl("/api/outreach-queue")).then((r) => r.json()).then((j) => j.messages || []).catch(() => []),
     fetch(productUrl("/api/cohorts")).then((r) => r.json()).then((j) => j.cohorts || []).catch(() => []),
-    fetch("/api/integrations").then((r) => r.json()).catch(() => ({}))
+    fetch("/api/integrations").then((r) => r.json()).catch(() => ({})),
+    fetch("/api/agent-health").then((r) => r.json()).catch(() => ({ summary: {}, agents: [] }))
   ]);
   state.registry = registry;
   state.bus = bus;
@@ -276,6 +278,7 @@ async function load() {
   state.outreachQueue = outreachQueue;
   state.cohorts = cohorts;
   state.integrations = integrations;
+  state.agentHealth = agentHealth;
   render();
 }
 
@@ -2161,6 +2164,63 @@ function renderActivity() {
   return el;
 }
 
+/* ---------- page: Agent Health ---------- */
+const TIER_ORDER = ["lead", "cohort", "control", "deterministic"];
+const TIER_LABEL = { lead: "Lead (per-lead live path)", cohort: "Cohort (per approved cohort)", control: "Control (weekly/monthly strategy)", deterministic: "Deterministic (code, off live path)" };
+
+function renderAgentHealth() {
+  const health = state.agentHealth || { summary: {}, agents: [] };
+  const summary = health.summary || {};
+  const el = h("section", { class: "page" });
+  el.append(pageHead(
+    "System",
+    "Agent health",
+    `${summary.total || 0} agents · ${summary.critical || 0} on the live path · ${summary.blocked || 0} blocked · strategy ${health.strategy_version || "?"}`,
+    [h("button", { class: "btn", text: "Refresh", onclick: () => load() })]
+  ));
+
+  el.append(h("div", { class: "capacity-metrics" }, [
+    metric("Live-path agents", numberOrDash(summary.critical)),
+    metric("Fresh artifacts", numberOrDash(summary.fresh)),
+    metric("Blocked", numberOrDash(summary.blocked)),
+    metric("Total registered", numberOrDash(summary.total))
+  ]));
+
+  for (const tier of TIER_ORDER) {
+    const agents = (health.agents || []).filter((a) => a.tier === tier);
+    if (!agents.length) continue;
+    const rows = h("div", { class: "agent-health-list" });
+    for (const a of agents) {
+      const state_chip = a.blocker ? h("span", { class: "chip warn", text: "blocked" })
+        : a.fresh ? h("span", { class: "chip fit", text: "fresh" })
+        : a.status === "never_run" ? h("span", { class: "chip", text: "never run" })
+        : h("span", { class: "chip", text: humanize(a.status || "idle") });
+      rows.append(h("article", { class: `agent-health-row${a.criticalPath ? " critical" : ""}` }, [
+        h("div", { class: "ah-main" }, [
+          h("div", { class: "ah-head" }, [
+            h("strong", { text: a.slug }),
+            a.criticalPath ? h("span", { class: "chip ai", text: "live path" }) : null,
+            a.benchmarkRequired ? h("span", { class: "chip", text: "benchmarked" }) : null,
+            state_chip
+          ]),
+          h("p", { class: "muted small", text: a.blocker ? `Blocker: ${a.blocker}` : `Last run ${a.lastRunAt ? new Date(a.lastRunAt).toLocaleString() : "—"} · ${a.downstreamConsumers.length} downstream consumer${a.downstreamConsumers.length === 1 ? "" : "s"}` }),
+          a.unconsumedFields.length ? h("p", { class: "warn-line small", text: `Unconsumed output: ${a.unconsumedFields.join(", ")}` }) : null
+        ]),
+        h("div", { class: "ah-meta" }, [
+          h("span", { text: `${a.cadence}` }),
+          h("span", { text: a.schemaPass == null ? "schema —" : a.schemaPass ? "schema ✓" : "schema ✗" }),
+          h("span", { text: `≤${a.maxRuntimeSeconds}s · ≤$${a.maxCostUsd}` })
+        ])
+      ]));
+    }
+    el.append(h("section", { class: "block" }, [
+      h("h2", { class: "block-title", text: `${TIER_LABEL[tier] || tier} · ${agents.length}` }),
+      rows
+    ]));
+  }
+  return el;
+}
+
 /* ---------- router ---------- */
 function render() {
   applyProductChrome();
@@ -2176,6 +2236,7 @@ function render() {
     leads: renderLeads,
     outreach: renderOutreach,
     approvals: renderApprovals,
+    agents: renderAgentHealth,
     calendar: renderCalendar,
     intelligence: renderIntelligence,
     activity: renderActivity
@@ -2183,7 +2244,7 @@ function render() {
   stageEl.replaceChildren((views[state.view] || renderOverview)());
 }
 
-const VIEWS = new Set(["overview", "leads", "outreach", "approvals", "calendar", "intelligence", "activity"]);
+const VIEWS = new Set(["overview", "leads", "outreach", "approvals", "agents", "calendar", "intelligence", "activity"]);
 
 function go(view, opts = {}) {
   state.view = view;

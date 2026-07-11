@@ -14,6 +14,7 @@ import { listRevenueEvents, recordRevenueEvent } from "./revenue-events.js";
 import { approveOutreachCohort, approveOutreachMessage, createProviderDraft, listCohorts, listOutreachMessages, queueOutreachMessage, rejectOutreachMessage, sendApprovedDraft, syncGmail } from "./outreach-queue.js";
 import { GmailProvider, GoogleCalendarProvider, googleWorkspaceStatus } from "./google-workspace.js";
 import { sendingEnabled } from "./outbound-guard.js";
+import { buildAgentHealth } from "./agent-health.js";
 import { bookMeeting, buildCallBrief, listMeetings, proposeMeetingTimes } from "./meetings.js";
 
 const preferredPort = Number(process.env.PORT || 8792);
@@ -209,6 +210,11 @@ const server = http.createServer(async (request, response) => {
 
     if (url.pathname === "/api/pipeline-report" && request.method === "GET") {
       sendJson(response, 200, buildPipelineReport(undefined, await readRegistry()));
+      return;
+    }
+
+    if (url.pathname === "/api/agent-health" && request.method === "GET") {
+      sendJson(response, 200, buildAgentHealth(await readRegistry(), await readState()));
       return;
     }
 

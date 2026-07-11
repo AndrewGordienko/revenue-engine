@@ -74,6 +74,33 @@ New cohorts begin in `draft`. A founder must approve one exact sales play and th
 
 The Approvals dashboard shows cohort rules, message approvals, provider drafts, and Google integration status. The Overview shows actual versus target for verified contacts, sends, replies, meetings, qualified opportunities, proposals, wins, revenue, MRR, and implementation margin.
 
+### Draft-only mode (default)
+
+Outbound sending is **off by default and off today**. `OUTBOUND_SENDING_ENABLED` defaults to `0`; a single guard (`src/outbound-guard.js`) blocks every provider send path — `GmailProvider.sendDraft`, `sendApprovedDraft`, and the `/api/outreach-queue/:id/send` route (403). Cohorts are forced to `auto_send: false`, and creating a Gmail draft never marks a lead contacted (a `sent` event is only recorded from a real Gmail sent message). Enabling sending is a separate, deliberate milestone — and even then, prefer sending manually from Gmail.
+
+## Agent operating model
+
+Agents are tiered so the live per-lead path stays small. Each registry agent declares an `executionTier` (`control | cohort | lead | deterministic`), `criticalPath`, `cadence`, and freshness/cost/runtime budgets, enforced by `npm run validate:agents`.
+
+```text
+strategy:refresh (control, weekly/monthly)  →  cohort:build (per approved cohort)  →  lead:prepare (3 lead agents)
+```
+
+Named pipelines replace the old run-everything sequence:
+
+```sh
+npm run strategy:refresh -- gnk     # control tier, skips fresh artifacts
+npm run cohort:build:gnk            # cohort tier
+npm run lead:prepare -- gnk         # Commercial Dossier → unified writer → reviewer (~3 model calls)
+node src/run-pipeline.js lead:prepare gnk --dry-run
+```
+
+Sequence shape is deterministic (`src/sequence-skeleton.js`) from `SEQUENCE_POLICIES`; `client-dossier` is the Commercial Dossier (absorbs the outreach angle) and `email-drafter` is the unified sequence writer. The **Agents** dashboard view (`/api/agent-health`) shows each agent's tier, freshness, schema status, downstream consumers, unconsumed fields, and current blocker.
+
+### Acceptance harness
+
+`npm run acceptance` runs the agent scorecard against the 40-account benchmark (`npm run benchmark:build`): the deterministic classifier benchmark, `>=2/3` stability, field-consumption report, and the engineering gates (`<=6` critical lead calls, zero cross-brand leakage, strategy off the critical path, no guessed-email send-ready, deterministic stability, good-fit accuracy).
+
 ### Google Workspace
 
 Copy `.env.example` into your secret environment and provide either `GOOGLE_ACCESS_TOKEN` or the client ID, client secret, and refresh token. The OAuth grant needs Gmail compose/read access and Calendar free-busy/event access. Credentials are never stored in this repository.
