@@ -9,9 +9,10 @@ import { readRegistry, readState } from "./bus.js";
 import { db as dbForLedger } from "./db.js";
 import { fromRoot } from "./paths.js";
 import { PIPELINES, planPipeline, normalizeProduct } from "./pipelines.js";
-import { isLiveSmokeMode, requireCohortForLiveSmoke } from "./smoke-live.js";
+import { isLiveSmokeMode, requireCohortForLiveSmoke, loadManifest } from "./smoke-live.js";
 import { ingestFromState } from "./ingest-leads.js";
 import { promoteSequencesFromState } from "./promote-sequences.js";
+import { assertPlayConsistency } from "./play-consistency.js";
 
 // Which named pipelines close which side of the loop. cohort:build sources
 // accounts -> ingest them into the CRM; lead:prepare writes reviewed sequences
@@ -73,6 +74,18 @@ async function main() {
     console.error(`Unknown pipeline: ${pipelineName || "(none)"}`);
     console.error(`Available: ${Object.keys(PIPELINES).join(", ")}`);
     process.exit(1);
+  }
+
+  // Fail closed on manifest<->CRM play conflicts BEFORE any agent runs. Only the
+  // account-touching pipelines (cohort:build / lead:prepare / full) validate plays;
+  // strategy:refresh is brand-level and account-agnostic.
+  const touchesAccounts = pipelineTouches(pipelineName);
+  if (liveMode && (touchesAccounts.ingest || touchesAccounts.promote)) {
+    const consistency = assertPlayConsistency(dbForLedger(), loadManifest());
+    console.log(`[play-gate] ${consistency.accounts.length} accounts reconciled (` +
+      `${consistency.accounts.filter((a) => a.status === "ok").length} ok, ` +
+      `${consistency.accounts.filter((a) => a.status === "resolved").length} approved-change, ` +
+      `${consistency.accounts.filter((a) => a.status === "new").length} new)`);
   }
 
   const registry = await readRegistry();

@@ -13,6 +13,7 @@
 import { db } from "./db.js";
 import { readState } from "./bus.js";
 import { getLead } from "./crm-model.js";
+import { getCohort } from "./lineage.js";
 import { queueOutreachMessage } from "./outreach-queue.js";
 import { normalizeProduct } from "./lineage.js";
 
@@ -62,6 +63,14 @@ export function promoteSequence(database, product, seq, { operator = "pipeline" 
   const lead = matchLead(database, product, seq);
   if (!lead) return { company: seq.company, person: seq.person_name, status: "skipped", reason: "no_matching_lead", queued: 0 };
   if (!lead.play_id) return { company: seq.company, person: seq.person_name, lead_id: lead.id, status: "skipped", reason: "lead_has_no_play", queued: 0 };
+
+  // Never silently inherit a play that conflicts with the cohort the lead sits in.
+  // Cohorts are play-locked at approval; a lead whose play drifted from its cohort
+  // is a data error and must not be queued under the wrong play.
+  const cohort = lead.cohort_id ? getCohort(database, lead.cohort_id) : null;
+  if (cohort?.play_id && cohort.play_id !== lead.play_id) {
+    return { company: seq.company, person: seq.person_name, lead_id: lead.id, status: "skipped", reason: "play_conflicts_with_cohort", queued: 0, lead_play: lead.play_id, cohort_play: cohort.play_id };
+  }
 
   // Canonical recipient is the lead's verified contact. Fall back to the address
   // the reviewer carried, but if neither exists the sequence cannot be queued —

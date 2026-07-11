@@ -85,7 +85,8 @@
     "benchmark:build": "node benchmark/build-fixtures.mjs",
     "promote:sequences": "node src/promote-sequences.js",
     "loop:report": "node src/live-loop-report.js",
-    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js src/smoke-live.test.js src/promote-sequences.test.js src/live-loop-report.test.js"
+    "play:check": "node src/play-consistency.js",
+    "test": "node --test src/crm.test.js src/revenue-loop.test.js src/draft-only.test.js src/pipelines.test.js src/acceptance.test.js src/agent-health.test.js src/smoke.test.js src/smoke-live.test.js src/promote-sequences.test.js src/live-loop-report.test.js src/play-consistency.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
