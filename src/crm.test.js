@@ -222,6 +222,9 @@ test("cohort report tracks funnel, booked revenue, and implementation margin", (
   recordEvent(d, lead.id, "sent", { source: "test" });
   recordEvent(d, lead.id, "reply", { source: "test", payload: { body: "Yes, let's meet next week" } });
   recordEvent(d, lead.id, "meeting", { source: "test" });
+  d.prepare(`INSERT INTO meetings(lead_id,status,starts_at,ends_at,timezone,attendees,confirmation_status,time_confidence,intent,created_at,updated_at)
+    VALUES(?,'held',?,?, 'Europe/London','[]','human_confirmed','confirmed','commercial_discovery',?,?)`)
+    .run(lead.id, nowIso(), nowIso(), nowIso(), nowIso());
   const opp = openOpportunity(d, lead.id, {});
   setOppStage(d, opp.id, "qualified", { qualification: { problem: "p", consequence: "c", owner: "o", timing: "t", decision_path: "d", next_step: "n" } });
   setOppStage(d, opp.id, "solution_defined", { solution: { solution: "s", success_metrics: "m", price: "40k", responsibilities: "r" } });

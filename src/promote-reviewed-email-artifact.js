@@ -1,3 +1,9 @@
+// DEPRECATED (PR#6). This script is GNK-specific: it normalizes hardcoded email
+// TEXT and republishes the reviewer artifact, but it never creates outreach queue
+// records. The canonical, brand-agnostic path that turns a reviewed sequence into
+// pending-approval outreach_messages is src/promote-sequences.js
+// (`npm run promote:sequences <brand>`), which run-pipeline.js calls automatically
+// after lead:prepare. Keep this only for one-off GNK wording cleanup.
 import fs from "node:fs/promises";
 import { appendMessage, readRegistry, readState, writeState } from "./bus.js";
 import { SEQUENCE_POLICIES } from "./sales-plays.js";

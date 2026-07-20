@@ -19,7 +19,7 @@ export const PIPELINES = {
     tiers: ["lead"],
     criticalOnly: true,
     respectFreshness: false,
-    description: "Prepare shortlisted leads: Commercial Dossier, sequence writer, sequence reviewer. Roughly three model calls per serious lead.",
+    description: "Prepare shortlisted leads: person profile, Commercial Dossier, outreach angle, and LinkedIn message writer. Four model calls per serious lead.",
   },
   // Convenience chain: same reduced tiers, in order, freshness-aware.
   "full": {
@@ -30,11 +30,15 @@ export const PIPELINES = {
 
 export function agentBrand(agent) {
   if ((agent.brands || []).length > 1) return "shared";
-  return agent.slug.startsWith("outagehub-") ? "outagehub" : "gnk";
+  if (agent.slug.startsWith("outagehub-")) return "outagehub";
+  if (agent.slug.startsWith("morrow-")) return "morrow";
+  return "gnk";
 }
 
 export function normalizeProduct(product) {
-  return product === "ohub" || product === "outagehub" ? "outagehub" : "gnk";
+  if (product === "ohub" || product === "outagehub") return "outagehub";
+  if (product === "morrow") return "morrow";
+  return "gnk";
 }
 
 export function selectPipelineAgents(registry, pipelineName, product) {

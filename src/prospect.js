@@ -8,7 +8,7 @@ import { recommendedProspectPlan } from "./pipeline-capacity.js";
 import { STRATEGY_VERSION } from "./sales-plays.js";
 
 function normalizeProduct(value) {
-  return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
+  return value === "outagehub" || value === "ohub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 function agentSlug(product, suffix) {

@@ -30,7 +30,7 @@ const CHAIN = process.env.REGEN_STEPS
   : FULL_CHAIN;
 
 function normalizeProduct(value) {
-  return value === "ohub" || value === "outagehub" ? "outagehub" : "gnk";
+  return value === "ohub" || value === "outagehub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 function runAgent(slug) {

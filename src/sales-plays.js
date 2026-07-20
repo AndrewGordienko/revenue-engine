@@ -23,6 +23,17 @@ export const PORTFOLIO_STRATEGY = {
       positioning: "A Canadian power-event intelligence layer that tells operational systems which locations are affected, how confident the event is, what changed, and who needs to respond.",
       conversion: "Paid pilot → written success review → annual recurring agreement.",
     },
+    morrow: {
+      immediate_purpose: "Prove that adaptive robotic packing can be taught fast and run reliably on one live high-mix workflow.",
+      target_30_day: "Two to three design partners and one paid packing/kitting pilot on a real workflow.",
+      target_mrr_horizon: "Convert pilots into monthly Robotics-as-a-Service cells at $5k-$12k per cell.",
+      long_term_model: "A common learning system across many bodies — arms today, mobile manipulators and humanoids later.",
+      positioning: "Adaptive robotic packing for high-mix workflows that change too often for fixed automation: taught quickly, self-calibrating, and able to detect and recover from failures.",
+      method: ["Observe", "Teach", "Prove", "Deploy"],
+      acquisition_mix: ["LinkedIn connection requests to automation/operations owners", "facility walkthroughs", "integrator referrals"],
+      conversion: "Paid pilot → written success review → monthly Robotics-as-a-Service contract.",
+      outbound_channel: "LinkedIn connection request under 300 characters, then short DMs after acceptance.",
+    },
   },
 };
 
@@ -153,6 +164,40 @@ export const SALES_PLAYS = [
     success_metrics: ["sites mapped", "actionable events detected", "false/stale alerts controlled", "operator time reduced", "annual conversion decision"],
     expansion_path: "Annual portfolio contract expanding by sites, regions, analytics, and workflows.",
   },
+  {
+    play_id: "MORROW-COPACK-01",
+    brand: "morrow",
+    strategy_version: STRATEGY_VERSION,
+    name: "High-Mix Packing Pilot — Co-packer / Fulfillment",
+    target_account_definition: "A co-packer or fulfillment operation running high-mix, still-manual secondary packing, kitting, repacking, or returns with frequent changeovers.",
+    hard_disqualifiers: ["fully standardized sub-second fixed line", "needs locomotion or dexterous humanoid hands", "raw-food/pharma primary packaging", "no manual high-mix workflow", "procurement-only route"],
+    buyer_roles: { economic: "Operations Director/VP", technical: "Plant Automation/Manufacturing Engineering Manager", operational: "Packaging/Fulfillment Manager", router: "Continuous Improvement Manager" },
+    trigger_types: ["packing/kitting hiring", "new client onboarding", "changeover/labour complaint", "peak-season ramp", "automation RFQ", "line expansion"],
+    problem_hypothesis: "A high-mix packing or kitting job stays manual because fixed automation cannot economically absorb the SKU variation and changeovers, so it burns labour every shift.",
+    first_offer: "Paid 4-8 week packing/kitting pilot on one live workflow with measured throughput, completion rate, and interventions.",
+    price: { model: "pilot_then_recurring", pilot: { min: 15000, max: 50000, unit: "pilot" }, recurring: { min: 5000, max: 12000, unit: "month_per_cell" } },
+    proof_required: ["representative objects and packaging", "workflow film or walkthrough", "pass/fail definition", "throughput and completion baseline"],
+    discovery_questions: ["Which packing/kitting jobs are still manual and why?", "How many people and shifts does it take?", "How often do products/boxes/instructions change?", "What throughput and accuracy would a robot need?"],
+    success_metrics: ["units/hour target met", "high raw success with recovery to near-complete", "controlled interventions", "pilot converts to monthly RaaS"],
+    expansion_path: "Monthly RaaS cell → multi-cell/multi-site rollout across workflows.",
+  },
+  {
+    play_id: "MORROW-CPG-01",
+    brand: "morrow",
+    strategy_version: STRATEGY_VERSION,
+    name: "Secondary-Packing Pilot — CPG / Food / Cosmetics Manufacturer",
+    target_account_definition: "A CPG, food, cosmetics, or supplement manufacturer with variable secondary packing that stays manual despite existing line automation.",
+    hard_disqualifiers: ["single fixed machine already works perfectly", "sub-second high-speed picking", "highly deformable/transparent objects for a first deployment", "no automation owner", "no annual labour cost to justify a cell"],
+    buyer_roles: { economic: "Plant/Operations Director", technical: "Plant Automation Manager", operational: "Production/Packaging Manager", router: "Industrial Engineering Manager" },
+    trigger_types: ["plant automation hiring", "new SKU/variety-pack launch", "manual repack growth", "labour shortage", "capacity expansion", "retailer packaging change"],
+    problem_hypothesis: "Variable secondary packing (multipacks, variety packs, inserts, retail cartoning) remains manual because it changes too often for the plant's fixed automation.",
+    first_offer: "Paid pilot on one bounded secondary-packing workflow with measured throughput and completion, priced separately from the recurring cell.",
+    price: { model: "pilot_then_recurring", pilot: { min: 15000, max: 50000, unit: "pilot" }, recurring: { min: 5000, max: 12000, unit: "month_per_cell" } },
+    proof_required: ["objects and box configurations", "workflow observation", "pass/fail definition", "annual labour baseline"],
+    discovery_questions: ["Which secondary-packing tasks stay manual despite your line automation?", "What changeover frequency defeats fixed automation?", "What is the annual labour cost of this workflow?", "Who approves a pilot?"],
+    success_metrics: ["throughput target met on the workflow", "completion after recovery", "labour offset demonstrated", "pilot converts to monthly RaaS"],
+    expansion_path: "Monthly RaaS cell → additional lines and sites → common learning system across bodies.",
+  },
 ];
 
 export const SEQUENCE_POLICIES = {
@@ -167,6 +212,12 @@ export const SEQUENCE_POLICIES = {
     send_days: [1, 4, 9, 16, 25],
     motion: "workflow-led paid-pilot sale with technical and operational proof",
     touches: ["observed workflow and pilot hypothesis", "coverage/confidence proof", "implementation and success criteria", "annual expansion economics", "router-friendly close"],
+  },
+  morrow: {
+    touch_count: 4,
+    send_days: [1, 3, 7, 14],
+    motion: "LinkedIn-led outreach: a <=300-char connection request, then short DMs after acceptance, toward a paid packing/kitting pilot",
+    touches: ["<=300-char connection request naming the manual workflow and the automation gap", "short value DM with one specific packing/kitting example after acceptance", "offer to film or observe one workflow and scope a paid pilot", "router-friendly close toward the automation/operations owner"],
   },
 };
 

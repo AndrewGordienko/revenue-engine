@@ -7,7 +7,7 @@ import { appendMemory, rememberUnderstanding } from "./lead-memory.js";
 // instead of re-deriving. Best-effort: a mapping miss never fails a run.
 
 function productForSlug(slug) {
-  return slug.startsWith("outagehub-") ? "outagehub" : "gnk";
+  return slug.startsWith("outagehub-") ? "outagehub" : slug.startsWith("morrow-") ? "morrow" : "gnk";
 }
 
 function norm(value) {

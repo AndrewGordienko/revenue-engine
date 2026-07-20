@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sales Intelligence</title>
+    <title>SalesV3 Founder Revenue</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/styles.css">
   </head>
@@ -12,55 +12,44 @@
       <nav class="rail" id="rail" aria-label="Primary">
         <div class="rail-brand">
           <span class="mark" id="brand-mark">GNK</span>
-          <span class="rail-brand-text">Sales</span>
+          <span class="rail-brand-text">Revenue cockpit</span>
         </div>
         <div class="company-switch" aria-label="Company">
           <button type="button" class="company-option" data-product-switch="gnk">GNK</button>
           <button type="button" class="company-option" data-product-switch="outagehub">OHUB</button>
+          <button type="button" class="company-option" data-product-switch="morrow">MORROW</button>
+          <button type="button" class="company-option" data-product-switch="other">OTHER</button>
         </div>
 
-        <button type="button" class="rail-item" data-view="overview">
+        <button type="button" class="rail-item" data-view="work">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>
-          <span>Overview</span>
+          <span>Work</span><em class="rail-count" id="count-work"></em>
         </button>
-        <button type="button" class="rail-item" data-view="leads">
+        <button type="button" class="rail-item" data-view="network">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3Zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/></svg>
-          <span>Leads</span>
-          <em class="rail-count" id="count-leads"></em>
+          <span>Network</span><em class="rail-count" id="count-network"></em>
         </button>
-        <button type="button" class="rail-item" data-view="outreach">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></svg>
-          <span>Outreach</span>
+        <button type="button" class="rail-item" data-view="playbooks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h13a3 3 0 0 1 3 3v15H7a3 3 0 0 1-3-3V3Zm3 14h10V6H7v11Zm0 2a1 1 0 0 0 0 2h10v-2H7Z"/></svg>
+          <span>Playbooks</span>
         </button>
-        <button type="button" class="rail-item" data-view="approvals">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17Z"/></svg>
-          <span>Approvals</span>
+        <button type="button" class="rail-item" data-view="pipeline">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v3H3V5Zm3 5h12v3H6v-3Zm3 5h6v3H9v-3Z"/></svg>
+          <span>Pipeline</span>
         </button>
         <button type="button" class="rail-item" data-view="calendar">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2L2.01 6c0-1.1.89-2 1.99-2h3V2Zm13 8H4v10h16V10ZM4 8h16V6H4v2Zm3 5h5v4H7v-4Z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2L2.01 6c0-1.1.89-2 1.99-2h3V2Zm13 8H4v10h16V10ZM4 8h16V6H4v2Z"/></svg>
           <span>Calendar</span>
         </button>
-        <button type="button" class="rail-item" data-view="agents">
+        <button type="button" class="rail-item" data-view="system">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3L18 8v8l-6 3.3L6 16V8l6-3.7Z"/></svg>
-          <span>Agents</span>
-        </button>
-        <button type="button" class="rail-item" data-view="intelligence">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3 3 3 0 0 1-1.4 2.53l1.53 3.06a3 3 0 1 1-1.79.9L11.8 8.4a3.02 3.02 0 0 1-1.2-.06l-2 3.02A3 3 0 1 1 6 10.5a3 3 0 0 1 .9.14l2-3.02A3 3 0 0 1 9 5a3 3 0 0 1 3-3Z"/></svg>
-          <span>Knowledge</span>
-        </button>
-        <button type="button" class="rail-item" data-view="activity">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h2l2 5 4-12 3 9 2-4h5v-2h-6l-1 2-3-9-4 12-1-3H3v2Z"/></svg>
-          <span>Activity</span>
+          <span>System</span>
         </button>
 
-        <div class="rail-foot">
-          <span class="rail-task" id="rail-task"></span>
-        </div>
+        <div class="rail-foot"><span class="rail-task" id="rail-task"></span></div>
       </nav>
-
       <main class="stage" id="stage"></main>
     </div>
-
     <script type="module" src="/app.js"></script>
   </body>
 </html>

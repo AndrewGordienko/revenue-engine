@@ -16,7 +16,7 @@ async function safeMemory(product, event) {
 const legacyLeadsPath = fromRoot("data", "leads.jsonl");
 
 function normalizeProduct(value) {
-  return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
+  return value === "outagehub" || value === "ohub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 function leadsPath(product = "gnk") {

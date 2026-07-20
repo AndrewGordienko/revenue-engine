@@ -1,6 +1,27 @@
 # Revenue Engine
 
-This repo is a shared revenue-engine workspace for two deliberately different sales motions: GNK high-trust engineering sprints and OutageHub paid operational pilots.
+This repo is a shared revenue-engine workspace for three deliberately different sales motions: GNK high-trust engineering sprints, OutageHub paid operational pilots, and Morrow adaptive robotic packing pilots.
+
+## SalesV3 2.1 founder operating loop
+
+The dashboard is a LinkedIn-first founder revenue cockpit with six operator destinations: **Work**, **Network**, **Playbooks**, **Pipeline**, **Calendar**, and **System**. Work contains performable next actions only; people waiting for a new trigger live in Network's Watchlist and do not inflate open or overdue work. Commercial outcomes live in Pipeline, while raw agents, audit events, ontology, and run diagnostics sit under System rather than primary navigation.
+
+Import and reconcile the operator's LinkedIn history with:
+
+```sh
+npm run chats:import
+npm run founder:sync
+```
+
+Synchronization is idempotent. Imported messages preserve raw provenance and stable event keys. Meeting dates inferred from chat are queued for confirmation and are not treated as calendar-backed meetings.
+
+For day-to-day updates, open **Network → Messaged → Add or update LinkedIn DMs**. Copy either the full LinkedIn conversation page or a selected message timeline, paste it into the dashboard, optionally provide the person's name when the copied text omits it, and choose **Process LinkedIn DMs**. Existing messages are deduplicated; new messages merge into the same relationship and recalculate reply, call, follow-up, and next-action state.
+
+The official LinkedIn archive is the preferred source of identity and history truth. `npm run linkedin:import:official` reads both July 15 export directories, hashes them to ignore duplicate copies, imports exact `/in/` profile URLs, connections, and one-to-one messages, and archives the canonical CSVs under `data/inputs/linkedin-export-2026-07-15/`. Run `npm run connections:research:import` after the public-context research files are updated, then `npm run messages:morrow` to regenerate the three Morrow message stages. All three commands are idempotent.
+
+The company switch is a hard founder-facing scope: GNK shows only GNK relationships and evidence, OHUB only OutageHub, Morrow only Morrow, and Other holds unclassified or non-current-motion relationships. There is no all-companies control inside the founder workflow.
+
+The implementation specification is [docs/SalesV3_2.0_Agent_Implementation_Brief_2026-07-15.md](docs/SalesV3_2.0_Agent_Implementation_Brief_2026-07-15.md).
 
 ## What is here
 
@@ -17,6 +38,15 @@ This repo is a shared revenue-engine workspace for two deliberately different sa
 - `src/outreach-queue.js` enforces cohort approval, message approval, provider drafts, and stop-on-reply.
 - `src/google-workspace.js` integrates Gmail drafts/thread sync and Google Calendar free/busy/events.
 - `src/dashboard-server.js` serves the dashboard and JSON APIs.
+- `data/crm.db` is the canonical contact and revenue store for all three brands.
+- `src/consolidate-linkedin-contacts.js` promotes verified profiles into the CRM and safely removes unreferenced duplicate contact rows.
+- `src/import-linkedin-connections.js` cleans a LinkedIn connections text export, scores it for GNK/OHUB/Morrow fit, and maintains the review catalogue.
+- `src/import-linkedin-chats.js` removes copied LinkedIn interface chrome, reconstructs person-level message timelines, links them to the relationship catalogue, and derives editable call/follow-up workflow plus aggregate outreach learnings.
+- `src/import-linkedin-official-export.js` ingests the official Connections and messages CSVs, preserves exact profile URLs, and ignores duplicate export folders by content hash.
+- `src/import-needs-context-research.js` stores public-source research with provenance and promotes only corroborated relationships; ambiguity stays in Other.
+- `src/generate-morrow-connection-drafts.js` maintains three editable messages for every Morrow relationship: connection request, already-connected introduction, and call ask.
+- `src/founder-ops.js` reconciles LinkedIn activity into canonical events, next actions, meeting candidates, outcomes, and founder metrics.
+- `src/playbooks.js` turns verified conversation evidence and venture strategy into practical market, targeting, messaging, and experiment views.
 - `NOTES.md` captures project operating notes, including the exact-target ICP doctrine for agent output quality.
 
 ## Commands
@@ -43,6 +73,14 @@ npm run plan:capacity
 npm run guess:emails
 npm run apply:email-patterns
 npm run pipeline:gnk
+npm run pipeline:ohub
+npm run pipeline:morrow
+npm run linkedin:consolidate
+npm run connections:import
+npm run linkedin:import:official
+npm run connections:research:import
+npm run messages:morrow
+npm run chats:import
 npm run validate:agents
 npm run openai:status
 npm run dashboard
@@ -51,7 +89,7 @@ npm run report:pipeline
 npm test
 ```
 
-The dashboard defaults to `http://127.0.0.1:8792/`.
+The salesv3 dashboard defaults to `http://127.0.0.1:8796/`. Ports `8792`–`8795` are occupied by legacy `~/Documents/sales` app instances on this machine. **Network** unifies targets, people, accounts, warm routes, watchlist, identity review, LinkedIn history, and inline message preparation. **Playbooks** exposes market theses, explainable target matches, evidence-backed messaging lessons, and experiments for GNK, OutageHub, and Morrow. Old dashboard hashes redirect into the corresponding consolidated destination.
 
 ## Active commercial motions
 
@@ -72,7 +110,7 @@ provider event → CRM activity_event → reply classification → stage transit
 
 New cohorts begin in `draft`. A founder must approve one exact sales play and the cohort rules. Reviewed messages then enter `pending_approval`; each message requires separate approval before the system can create a Gmail draft. Automatic sending is deliberately disabled. After the human sends from Gmail, mailbox sync records the canonical sent event and immediately stops future touches when a reply, bounce, or unsubscribe arrives.
 
-The Approvals dashboard shows cohort rules, message approvals, provider drafts, and Google integration status. The Overview shows actual versus target for verified contacts, sends, replies, meetings, qualified opportunities, proposals, wins, revenue, MRR, and implementation margin.
+The LinkedIn-first operator flow has no separate Approvals page. Andrew reviews evidence, edits or accepts the suggested note, copies it, sends manually in LinkedIn, and records it as sent from the relationship drawer. Legacy email cohort approvals and Gmail draft machinery remain available underneath for later use but no longer shape the primary interface.
 
 ### Sending is not implemented (draft-only by construction)
 
@@ -101,7 +139,7 @@ npm run lead:prepare -- gnk         # Commercial Dossier → unified writer → 
 node src/run-pipeline.js lead:prepare gnk --dry-run
 ```
 
-Sequence shape is deterministic (`src/sequence-skeleton.js`) from `SEQUENCE_POLICIES`; `client-dossier` is the Commercial Dossier (absorbs the outreach angle) and `email-drafter` is the unified sequence writer. The **Agents** dashboard view (`/api/agent-health`) shows each agent's tier, freshness, schema status, downstream consumers, unconsumed fields, and current blocker.
+Sequence shape is deterministic (`src/sequence-skeleton.js`) from `SEQUENCE_POLICIES`; `client-dossier` is the Commercial Dossier (absorbs the outreach angle) and `email-drafter` is the unified sequence writer. The complete technical agent registry remains available from **System → Advanced**; founder-facing health is organized around the six accountable workflows instead of agent count.
 
 ### Acceptance harness
 
@@ -109,7 +147,7 @@ Sequence shape is deterministic (`src/sequence-skeleton.js`) from `SEQUENCE_POLI
 
 ### Draft-only smoke
 
-`npm run smoke:seed && npm run smoke:fixture && npm run smoke:assert` runs a six-account (3 GNK + 3 OutageHub) draft-only smoke through the real lineage, approval queue, and reporting with no credentials — enforcing nine hard gates (no send routes, no sent events, 4/5 touches per brand, one brand+play per lead, guessed emails unapprovable, clean end-state). See [`docs/smoke-runbook.md`](docs/smoke-runbook.md) for both the deterministic mode and the manual live-agent runbook.
+`npm run smoke:seed && npm run smoke:fixture && npm run smoke:assert` runs a six-account (3 GNK + 3 OutageHub) draft-only fixture smoke through the real lineage, approval queue, and reporting with no credentials — enforcing nine hard gates (no send routes, no sent events, 4/5 touches per brand, one brand+play per lead, guessed emails unapprovable, clean end-state). The credentialed loop is operated through contextual System operations or the OpenClaw Revenue Controller; `npm run smoke:live` remains the single-command debugging fallback. See [`docs/smoke-runbook.md`](docs/smoke-runbook.md).
 
 ### Google Workspace
 

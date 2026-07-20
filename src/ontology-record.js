@@ -35,7 +35,7 @@ async function ensureProductRoot(graph, product) {
 // Best-effort by design: callers wrap this so a mapping miss never fails a run.
 
 function productForSlug(slug) {
-  return slug.startsWith("outagehub-") ? "outagehub" : "gnk";
+  return slug.startsWith("outagehub-") ? "outagehub" : slug.startsWith("morrow-") ? "morrow" : "gnk";
 }
 
 async function recordAccountSourcing(graph, product, artifact) {

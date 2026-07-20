@@ -1,5 +1,12 @@
 .openclaw-agents/
 openclaw-workspaces/
+connections.txt
+allchats.txt
+linkedins.txt
+output/
+tmp/
+*.db
+
 
 # Runtime data can contain prospect details, generated outreach, and local state.
 data/*
@@ -8,6 +15,11 @@ data/*
 data/inputs/*
 !data/inputs/account-list.example.json
 !data/inputs/live-smoke-accounts.example.json
+!data/inputs/play-decisions.example.json
+# NOTE: the real contact inputs (linkedin-profile-overrides.json,
+# linkedin-connection-messages.json, morrow-linkedin-contacts.json) contain real
+# names + LinkedIn URLs and are DELIBERATELY NOT whitelisted — they stay ignored so a
+# `git add -A` can never publish them. Keep them local-only.
 !data/ontology/
 data/ontology/*
 !data/ontology/schema.yaml

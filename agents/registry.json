@@ -365,6 +365,47 @@
       "benchmarkRequired": false
     },
     {
+      "id": "salesv3-gnk-industry-map",
+      "slug": "gnk-industry-map",
+      "name": "GNK Industry Map",
+      "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
+      "sequence": 4.5,
+      "dependsOn": [
+        "revenue-demand-radar",
+        "gnk-company-context",
+        "gnk-icp-contact-profile",
+        "gnk-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-gnk-industry-map",
+      "agentDir": ".openclaw-agents/salesv3-gnk-industry-map/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.gnk.software/"
+      ],
+      "outputs": [
+        "industry_map_summary",
+        "total_industries",
+        "industries",
+        "coverage_gaps",
+        "recommended_sourcing_order",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
+    },
+    {
       "id": "salesv3-gnk-revenue-strategy",
       "slug": "gnk-revenue-strategy",
       "name": "GNK Revenue Strategy",
@@ -575,6 +616,9 @@
       "agentDir": ".openclaw-agents/salesv3-gnk-lead-persona-profile/agent",
       "execution": "api-key",
       "model": "openai/gpt-5.4-mini",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
+      ],
       "sourceUrls": [
         "https://www.gnk.software/"
       ],
@@ -588,7 +632,7 @@
         "source_notes"
       ],
       "executionTier": "lead",
-      "criticalPath": false,
+      "criticalPath": true,
       "cadence": "event_driven",
       "staleAfterHours": 720,
       "maxRuntimeSeconds": 300,
@@ -603,6 +647,7 @@
       "sequence": 10,
       "dependsOn": [
         "gnk-contact-discovery",
+        "gnk-lead-persona-profile",
         "gnk-offer-map",
         "gnk-boutique-growth-playbook",
         "gnk-revenue-strategy",
@@ -611,6 +656,9 @@
       "workspace": "openclaw-workspaces/salesv3-gnk-client-dossier",
       "agentDir": ".openclaw-agents/salesv3-gnk-client-dossier/agent",
       "model": "openai/gpt-5.4-mini",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
+      ],
       "sourceUrls": [
         "https://www.gnk.software/"
       ],
@@ -641,7 +689,7 @@
       "id": "salesv3-gnk-outreach-angle",
       "slug": "gnk-outreach-angle",
       "name": "GNK Outreach Angle",
-      "role": "[Superseded — off the live path] Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "role": "Produce the evidence-backed per-person outreach angle that connects a current signal and owned workflow to one concrete GNK engagement.",
       "sequence": 11,
       "dependsOn": [
         "gnk-client-dossier",
@@ -659,6 +707,9 @@
       "workspace": "openclaw-workspaces/salesv3-gnk-outreach-angle",
       "agentDir": ".openclaw-agents/salesv3-gnk-outreach-angle/agent",
       "model": "openai/gpt-5.4-mini",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
+      ],
       "sourceUrls": [
         "https://www.gnk.software/"
       ],
@@ -676,7 +727,7 @@
       "thinking": "high",
       "timeoutSeconds": 1800,
       "executionTier": "lead",
-      "criticalPath": false,
+      "criticalPath": true,
       "cadence": "per_lead",
       "staleAfterHours": 72,
       "maxRuntimeSeconds": 300,
@@ -766,12 +817,13 @@
     {
       "id": "salesv3-gnk-email-drafter",
       "slug": "gnk-email-drafter",
-      "name": "GNK Email Drafter",
-      "role": "Unified sequence writer: produce the complete four-touch per-person sequence on the deterministic skeleton, grounded in the Commercial Dossier and verified contact.",
+      "name": "GNK LinkedIn Message Writer",
+      "role": "Write hyper-tailored LinkedIn connection requests under 300 characters, grounded in verified profiles, person research, the Commercial Dossier, and outreach angle.",
       "sequence": 14,
       "dependsOn": [
-        "gnk-email-finder",
         "gnk-client-dossier",
+        "gnk-lead-persona-profile",
+        "gnk-outreach-angle",
         "gnk-contact-discovery",
         "gnk-boutique-growth-playbook",
         "gnk-revenue-strategy",
@@ -779,20 +831,17 @@
       ],
       "workspace": "openclaw-workspaces/salesv3-gnk-email-drafter",
       "agentDir": ".openclaw-agents/salesv3-gnk-email-drafter/agent",
-      "model": "openai/gpt-5.5",
-      "modelFallbacks": [
-        "openai/gpt-5.4-mini"
+      "model": "openai/gpt-5.6",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
       ],
       "thinking": "high",
       "sourceUrls": [
         "https://www.gnk.software/"
       ],
       "outputs": [
-        "sequence_draft_summary",
-        "person_email_sequences",
-        "company_sequence_maps",
-        "recommended_send_order",
-        "global_send_rules",
+        "linkedin_message_summary",
+        "linkedin_connection_messages",
         "claims_to_avoid",
         "source_notes"
       ],
@@ -891,7 +940,7 @@
       "execution": "api-key",
       "timeoutSeconds": 1800,
       "executionTier": "lead",
-      "criticalPath": true,
+      "criticalPath": false,
       "cadence": "per_lead",
       "staleAfterHours": 72,
       "maxRuntimeSeconds": 300,
@@ -1059,6 +1108,54 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false
+    },
+    {
+      "id": "salesv3-outagehub-industry-map",
+      "slug": "outagehub-industry-map",
+      "name": "OutageHub Industry Map",
+      "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
+      "sequence": 104.5,
+      "dependsOn": [
+        "revenue-demand-radar",
+        "outagehub-company-context",
+        "outagehub-icp-contact-profile",
+        "outagehub-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-outagehub-industry-map",
+      "agentDir": ".openclaw-agents/salesv3-outagehub-industry-map/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "https://www.outagehub.ca/",
+        "https://www.outagehub.ca/developers",
+        "https://www.outagehub.ca/developers/playground",
+        "https://www.outagehub.ca/developers/notifications"
+      ],
+      "outputs": [
+        "industry_map_summary",
+        "total_industries",
+        "industries",
+        "excluded_because_data_source",
+        "coverage_gaps",
+        "recommended_sourcing_order",
+        "open_questions",
+        "source_notes"
+      ],
+      "commercialTargetKey": "outagehub",
+      "productName": "OutageHub",
+      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
       "executionTier": "control",
       "criticalPath": false,
       "cadence": "monthly",
@@ -1357,6 +1454,9 @@
       "agentDir": ".openclaw-agents/salesv3-outagehub-lead-persona-profile/agent",
       "execution": "api-key",
       "model": "openai/gpt-5.4-mini",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
+      ],
       "sourceUrls": [
         "https://www.outagehub.ca/",
         "https://www.outagehub.ca/developers"
@@ -1374,7 +1474,7 @@
       "productName": "OutageHub",
       "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "executionTier": "lead",
-      "criticalPath": false,
+      "criticalPath": true,
       "cadence": "event_driven",
       "staleAfterHours": 720,
       "maxRuntimeSeconds": 300,
@@ -1389,6 +1489,7 @@
       "sequence": 111,
       "dependsOn": [
         "outagehub-contact-discovery",
+        "outagehub-lead-persona-profile",
         "outagehub-offer-map",
         "outagehub-market-coverage",
         "outagehub-boutique-growth-playbook",
@@ -1398,6 +1499,9 @@
       "workspace": "openclaw-workspaces/salesv3-outagehub-client-dossier",
       "agentDir": ".openclaw-agents/salesv3-outagehub-client-dossier/agent",
       "model": "openai/gpt-5.4-mini",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
+      ],
       "sourceUrls": [
         "https://www.outagehub.ca/",
         "https://www.outagehub.ca/developers",
@@ -1434,7 +1538,7 @@
       "id": "salesv3-outagehub-outreach-angle",
       "slug": "outagehub-outreach-angle",
       "name": "OutageHub Outreach Angle",
-      "role": "[Superseded — off the live path] Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "role": "Produce the evidence-backed per-person outreach angle that connects a current signal and owned workflow to one concrete OutageHub pilot.",
       "sequence": 112,
       "dependsOn": [
         "outagehub-client-dossier",
@@ -1453,6 +1557,9 @@
       "workspace": "openclaw-workspaces/salesv3-outagehub-outreach-angle",
       "agentDir": ".openclaw-agents/salesv3-outagehub-outreach-angle/agent",
       "model": "openai/gpt-5.4-mini",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
+      ],
       "sourceUrls": [
         "https://www.outagehub.ca/",
         "https://www.outagehub.ca/developers",
@@ -1476,7 +1583,7 @@
       "thinking": "high",
       "timeoutSeconds": 1800,
       "executionTier": "lead",
-      "criticalPath": false,
+      "criticalPath": true,
       "cadence": "per_lead",
       "staleAfterHours": 72,
       "maxRuntimeSeconds": 300,
@@ -1580,12 +1687,13 @@
     {
       "id": "salesv3-outagehub-email-drafter",
       "slug": "outagehub-email-drafter",
-      "name": "OutageHub Email Drafter",
-      "role": "Unified sequence writer: produce the complete five-touch per-person sequence on the deterministic skeleton, grounded in the Commercial Dossier and verified contact.",
+      "name": "OutageHub LinkedIn Message Writer",
+      "role": "Write hyper-tailored LinkedIn connection requests under 300 characters, grounded in verified profiles, person research, the Commercial Dossier, and outreach angle.",
       "sequence": 115,
       "dependsOn": [
-        "outagehub-email-finder",
         "outagehub-client-dossier",
+        "outagehub-lead-persona-profile",
+        "outagehub-outreach-angle",
         "outagehub-contact-discovery",
         "outagehub-boutique-growth-playbook",
         "outagehub-revenue-strategy",
@@ -1594,9 +1702,9 @@
       ],
       "workspace": "openclaw-workspaces/salesv3-outagehub-email-drafter",
       "agentDir": ".openclaw-agents/salesv3-outagehub-email-drafter/agent",
-      "model": "openai/gpt-5.5",
-      "modelFallbacks": [
-        "openai/gpt-5.4-mini"
+      "model": "openai/gpt-5.6",
+      "inputFiles": [
+        "data/inputs/linkedin-profile-overrides.json"
       ],
       "thinking": "high",
       "sourceUrls": [
@@ -1606,11 +1714,8 @@
         "https://www.outagehub.ca/developers/notifications"
       ],
       "outputs": [
-        "sequence_draft_summary",
-        "person_email_sequences",
-        "company_sequence_maps",
-        "recommended_send_order",
-        "global_send_rules",
+        "linkedin_message_summary",
+        "linkedin_connection_messages",
         "claims_to_avoid",
         "source_notes"
       ],
@@ -1726,7 +1831,7 @@
       "execution": "api-key",
       "timeoutSeconds": 1800,
       "executionTier": "lead",
-      "criticalPath": true,
+      "criticalPath": false,
       "cadence": "per_lead",
       "staleAfterHours": 72,
       "maxRuntimeSeconds": 300,
@@ -1734,84 +1839,193 @@
       "benchmarkRequired": true
     },
     {
-      "id": "salesv3-gnk-industry-map",
-      "slug": "gnk-industry-map",
-      "name": "GNK Industry Map",
-      "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
-      "sequence": 4.5,
-      "dependsOn": [
-        "revenue-demand-radar",
-        "gnk-company-context",
-        "gnk-icp-contact-profile",
-        "gnk-offer-map"
-      ],
-      "workspace": "openclaw-workspaces/salesv3-gnk-industry-map",
-      "agentDir": ".openclaw-agents/salesv3-gnk-industry-map/agent",
-      "model": "openai/gpt-5.5",
-      "modelFallbacks": [
-        "openai/gpt-5.4-mini"
-      ],
-      "thinking": "high",
+      "id": "salesv3-morrow-company-context",
+      "slug": "morrow-company-context",
+      "name": "Morrow Company Context",
+      "role": "Research the Morrow site and maintain the shared truth about what Morrow does.",
+      "sequence": 201,
+      "dependsOn": [],
+      "workspace": "openclaw-workspaces/salesv3-morrow-company-context",
+      "agentDir": ".openclaw-agents/salesv3-morrow-company-context/agent",
+      "model": "openai/gpt-5.4-mini",
       "sourceUrls": [
-        "https://www.gnk.software/"
+        "internal:morrow-positioning-context"
       ],
       "outputs": [
-        "industry_map_summary",
-        "total_industries",
-        "industries",
-        "coverage_gaps",
-        "recommended_sourcing_order",
+        "company_summary",
+        "service_lanes",
+        "target_pressures",
+        "sales_implications",
         "open_questions",
         "source_notes"
       ],
       "execution": "api-key",
-      "timeoutSeconds": 1800,
       "executionTier": "control",
       "criticalPath": false,
       "cadence": "monthly",
       "staleAfterHours": 720,
       "maxRuntimeSeconds": 900,
       "maxCostUsd": 2,
-      "benchmarkRequired": false
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
     },
     {
-      "id": "salesv3-outagehub-industry-map",
-      "slug": "outagehub-industry-map",
-      "name": "OutageHub Industry Map",
+      "id": "salesv3-morrow-icp-contact-profile",
+      "slug": "morrow-icp-contact-profile",
+      "name": "Morrow ICP Contact Profile",
+      "role": "Turn Morrow company context into ideal customer profiles and contact targeting guidance.",
+      "sequence": 202,
+      "dependsOn": [
+        "morrow-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-icp-contact-profile",
+      "agentDir": ".openclaw-agents/salesv3-morrow-icp-contact-profile/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "icp_summary",
+        "priority_segments",
+        "buyer_personas",
+        "contact_titles",
+        "trigger_events",
+        "fit_signals",
+        "disqualifiers",
+        "commercial_floor_signals",
+        "reachability_signals",
+        "outreach_angles",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-boutique-growth-playbook",
+      "slug": "morrow-boutique-growth-playbook",
+      "name": "Morrow Deployment Growth Playbook",
+      "role": "Research how successful co-packers, fulfillment, and CPG manufacturers acquired clients and translate the lessons into Morrow sales strategy policy.",
+      "sequence": 203,
+      "dependsOn": [
+        "morrow-company-context",
+        "morrow-icp-contact-profile"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-boutique-growth-playbook",
+      "agentDir": ".openclaw-agents/salesv3-morrow-boutique-growth-playbook/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "playbook_summary",
+        "companies_studied",
+        "historical_patterns",
+        "targeting_lessons",
+        "offer_lessons",
+        "credibility_lessons",
+        "sales_motion_lessons",
+        "response_generation_lessons",
+        "strategic_gaps_for_gnk",
+        "agent_policy_updates",
+        "experiments_to_run",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-offer-map",
+      "slug": "morrow-offer-map",
+      "name": "Morrow Offer Map",
+      "role": "Turn Morrow company and ICP context into per-segment pain, outcome, proof, and why-buy-now offer maps.",
+      "sequence": 204,
+      "dependsOn": [
+        "morrow-company-context",
+        "morrow-icp-contact-profile",
+        "morrow-boutique-growth-playbook"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-offer-map",
+      "agentDir": ".openclaw-agents/salesv3-morrow-offer-map/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "offer_map_summary",
+        "segment_offer_maps",
+        "cross_segment_offer_principles",
+        "urgency_triggers",
+        "proof_assets_to_build",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-industry-map",
+      "slug": "morrow-industry-map",
+      "name": "Morrow Industry Map",
       "role": "Enumerate every industry that fits the ICP and give a deep per-industry playbook to find companies and people (ICP -> industries -> companies -> people).",
-      "sequence": 104.5,
+      "sequence": 204.5,
       "dependsOn": [
         "revenue-demand-radar",
-        "outagehub-company-context",
-        "outagehub-icp-contact-profile",
-        "outagehub-offer-map"
+        "morrow-company-context",
+        "morrow-icp-contact-profile",
+        "morrow-offer-map"
       ],
-      "workspace": "openclaw-workspaces/salesv3-outagehub-industry-map",
-      "agentDir": ".openclaw-agents/salesv3-outagehub-industry-map/agent",
+      "workspace": "openclaw-workspaces/salesv3-morrow-industry-map",
+      "agentDir": ".openclaw-agents/salesv3-morrow-industry-map/agent",
       "model": "openai/gpt-5.5",
       "modelFallbacks": [
         "openai/gpt-5.4-mini"
       ],
       "thinking": "high",
       "sourceUrls": [
-        "https://www.outagehub.ca/",
-        "https://www.outagehub.ca/developers",
-        "https://www.outagehub.ca/developers/playground",
-        "https://www.outagehub.ca/developers/notifications"
+        "internal:morrow-positioning-context"
       ],
       "outputs": [
         "industry_map_summary",
         "total_industries",
         "industries",
-        "excluded_because_data_source",
         "coverage_gaps",
         "recommended_sourcing_order",
         "open_questions",
         "source_notes"
       ],
-      "commercialTargetKey": "outagehub",
-      "productName": "OutageHub",
-      "projectDescription": "The user is building an OutageHub paid-pilot pipeline for Canadian power-event intelligence tied to operational decisions and annual recurring contracts.",
       "execution": "api-key",
       "timeoutSeconds": 1800,
       "executionTier": "control",
@@ -1820,7 +2034,580 @@
       "staleAfterHours": 720,
       "maxRuntimeSeconds": 900,
       "maxCostUsd": 2,
-      "benchmarkRequired": false
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-revenue-strategy",
+      "slug": "morrow-revenue-strategy",
+      "name": "Morrow Revenue Strategy",
+      "role": "Turn Morrow commercial targets, commission economics, and company-size constraints into deal-tier sourcing and scoring policy.",
+      "sequence": 205,
+      "dependsOn": [
+        "morrow-company-context",
+        "morrow-icp-contact-profile",
+        "morrow-boutique-growth-playbook",
+        "morrow-offer-map"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-revenue-strategy",
+      "agentDir": ".openclaw-agents/salesv3-morrow-revenue-strategy/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "strategy_summary",
+        "revenue_math",
+        "deal_tiers",
+        "company_size_boundaries",
+        "target_industry_logic",
+        "portfolio_strategy",
+        "sourcing_rules",
+        "scoring_rules",
+        "seller_commission_plan",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "monthly",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 900,
+      "maxCostUsd": 2,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-pipeline-capacity",
+      "slug": "morrow-pipeline-capacity",
+      "name": "Morrow Pipeline Capacity",
+      "role": "Calculate required pipeline inventory, daily outbound volume, and lead-bucket refill targets from Morrow revenue goals.",
+      "sequence": 206,
+      "dependsOn": [
+        "morrow-revenue-strategy"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-pipeline-capacity",
+      "agentDir": ".openclaw-agents/salesv3-morrow-pipeline-capacity/agent",
+      "runner": "local",
+      "model": "local/deterministic",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "capacity_summary",
+        "revenue_goal",
+        "conversion_assumptions",
+        "pipeline_targets",
+        "bucket_targets",
+        "recommended_split",
+        "recommended_prospecting",
+        "operating_rules",
+        "source_notes"
+      ],
+      "executionTier": "control",
+      "criticalPath": false,
+      "cadence": "weekly",
+      "staleAfterHours": 168,
+      "maxRuntimeSeconds": 120,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-account-sourcing",
+      "slug": "morrow-account-sourcing",
+      "name": "Morrow Account Sourcing",
+      "role": "Source named target accounts that match Morrow ICP guidance and have a timely public trigger event.",
+      "sequence": 207,
+      "dependsOn": [
+        "revenue-demand-radar",
+        "morrow-company-context",
+        "morrow-industry-map",
+        "morrow-icp-contact-profile",
+        "morrow-boutique-growth-playbook",
+        "morrow-offer-map",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-account-sourcing",
+      "agentDir": ".openclaw-agents/salesv3-morrow-account-sourcing/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "sourcing_summary",
+        "search_strategy",
+        "target_accounts",
+        "near_misses",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-account-scoring",
+      "slug": "morrow-account-scoring",
+      "name": "Morrow Account Scoring",
+      "role": "Rank input accounts against Morrow fit signals and disqualifiers, returning scored accounts with reasons and top-N recommendations.",
+      "sequence": 208,
+      "dependsOn": [
+        "morrow-company-context",
+        "morrow-icp-contact-profile",
+        "morrow-boutique-growth-playbook",
+        "morrow-offer-map",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity",
+        "morrow-account-sourcing"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-account-scoring",
+      "agentDir": ".openclaw-agents/salesv3-morrow-account-scoring/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "inputFiles": [
+        "data/inputs/account-list.json"
+      ],
+      "outputs": [
+        "scoring_summary",
+        "input_status",
+        "scorecard",
+        "ranked_accounts",
+        "top_accounts",
+        "not_recommended",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-contact-discovery",
+      "slug": "morrow-contact-discovery",
+      "name": "Morrow Contact Discovery",
+      "role": "Find named working problem owners, evaluators, and credible routers at top accounts, avoiding unreachable executive-only targets.",
+      "sequence": 209,
+      "dependsOn": [
+        "morrow-company-context",
+        "morrow-account-scoring",
+        "morrow-icp-contact-profile",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-contact-discovery",
+      "agentDir": ".openclaw-agents/salesv3-morrow-contact-discovery/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "discovery_summary",
+        "search_strategy",
+        "account_contact_maps",
+        "contacts_to_prioritize",
+        "contacts_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-lead-persona-profile",
+      "slug": "morrow-lead-persona-profile",
+      "name": "Morrow Lead Persona Profile",
+      "role": "Research each discovered lead's individual culture, mindset, communication style, and perspective, and attach that vibe read to the lead and knowledge graph.",
+      "sequence": 209.5,
+      "dependsOn": [
+        "morrow-contact-discovery",
+        "morrow-icp-contact-profile"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-lead-persona-profile",
+      "agentDir": ".openclaw-agents/salesv3-morrow-lead-persona-profile/agent",
+      "execution": "api-key",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "persona_summary",
+        "search_strategy",
+        "person_personas",
+        "cross_persona_patterns",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "event_driven",
+      "staleAfterHours": 720,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-client-dossier",
+      "slug": "morrow-client-dossier",
+      "name": "Morrow Client Dossier",
+      "role": "Commercial Dossier: synthesize company, person, role, trigger, owned workflow, buyer/router, problem hypothesis, offer, first outcome, proof available/missing, contact evidence, allowed/forbidden claims, and the recommended angle in one output.",
+      "sequence": 210,
+      "dependsOn": [
+        "morrow-contact-discovery",
+        "morrow-offer-map",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-client-dossier",
+      "agentDir": ".openclaw-agents/salesv3-morrow-client-dossier/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "dossier_summary",
+        "company_contact_dossiers",
+        "dossiers",
+        "contact_offer_alignment",
+        "outreach_notes",
+        "evidence_gaps",
+        "open_questions",
+        "source_notes",
+        "recommended_angle",
+        "claims_allowed",
+        "claims_forbidden"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-outreach-angle",
+      "slug": "morrow-outreach-angle",
+      "name": "Morrow Outreach Angle",
+      "role": "[Superseded — off the live path] Produce a per-person outreach dossier with one specific opener tied to that person's trigger, role, and likely pain.",
+      "sequence": 211,
+      "dependsOn": [
+        "morrow-client-dossier",
+        "morrow-lead-persona-profile",
+        "morrow-contact-discovery",
+        "morrow-account-scoring",
+        "morrow-account-sourcing",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity",
+        "morrow-offer-map",
+        "morrow-icp-contact-profile",
+        "morrow-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-outreach-angle",
+      "agentDir": ".openclaw-agents/salesv3-morrow-outreach-angle/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "angle_summary",
+        "input_status",
+        "company_outreach_maps",
+        "person_dossiers",
+        "angle_patterns",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "thinking": "high",
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-sequence-strategy",
+      "slug": "morrow-sequence-strategy",
+      "name": "Morrow Sequence Strategy",
+      "role": "[Superseded — off the live path] Legacy sequence-shape strategist; sequence shape is now generated deterministically from SEQUENCE_POLICIES.",
+      "sequence": 212,
+      "dependsOn": [
+        "morrow-outreach-angle",
+        "morrow-client-dossier",
+        "morrow-contact-discovery",
+        "morrow-account-scoring",
+        "morrow-account-sourcing",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity",
+        "morrow-offer-map",
+        "morrow-icp-contact-profile",
+        "morrow-company-context"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-sequence-strategy",
+      "agentDir": ".openclaw-agents/salesv3-morrow-sequence-strategy/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "sequence_summary",
+        "strategic_point_of_view",
+        "sequence_architecture",
+        "touch_plan",
+        "persona_variants",
+        "timing_and_exit_rules",
+        "anti_spam_rules",
+        "handoff_to_drafter",
+        "claims_to_avoid",
+        "open_questions",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "thinking": "high",
+      "executionTier": "deterministic",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 0,
+      "maxRuntimeSeconds": 60,
+      "maxCostUsd": 0.05,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-email-finder",
+      "slug": "morrow-email-finder",
+      "name": "Morrow Email Finder",
+      "role": "Infer each company's email format from public evidence and produce likely email candidates for CRM leads.",
+      "sequence": 213,
+      "dependsOn": [
+        "morrow-contact-discovery",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-email-finder",
+      "agentDir": ".openclaw-agents/salesv3-morrow-email-finder/agent",
+      "model": "openai/gpt-5.4-mini",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "email_summary",
+        "company_email_maps",
+        "results",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "executionTier": "cohort",
+      "criticalPath": true,
+      "cadence": "per_cohort",
+      "staleAfterHours": 336,
+      "maxRuntimeSeconds": 600,
+      "maxCostUsd": 1,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-email-drafter",
+      "slug": "morrow-email-drafter",
+      "name": "Morrow Email Drafter",
+      "role": "Unified sequence writer: produce the complete four-touch per-person sequence on the deterministic skeleton, grounded in the Commercial Dossier and verified contact.",
+      "sequence": 214,
+      "dependsOn": [
+        "morrow-email-finder",
+        "morrow-client-dossier",
+        "morrow-contact-discovery",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-email-drafter",
+      "agentDir": ".openclaw-agents/salesv3-morrow-email-drafter/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "linkedin_message_summary",
+        "linkedin_connection_messages",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": true,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-email-sequence-drafter",
+      "slug": "morrow-email-sequence-drafter",
+      "name": "Morrow Email Sequence Drafter",
+      "role": "[Superseded — off the live path] Draft four-touch, high-trust Morrow sequences that use trigger evidence, buyer context, the selected sprint, and the approved first-touch voice.",
+      "sequence": 215,
+      "dependsOn": [
+        "morrow-email-drafter",
+        "morrow-sequence-strategy",
+        "morrow-email-finder",
+        "morrow-outreach-angle",
+        "morrow-client-dossier",
+        "morrow-contact-discovery",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-email-sequence-drafter",
+      "agentDir": ".openclaw-agents/salesv3-morrow-email-sequence-drafter/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "sequence_draft_summary",
+        "person_email_sequences",
+        "company_sequence_maps",
+        "recommended_send_order",
+        "global_send_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": false,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
+    },
+    {
+      "id": "salesv3-morrow-email-sequence-reviewer",
+      "slug": "morrow-email-sequence-reviewer",
+      "name": "Morrow Email Sequence Reviewer",
+      "role": "Adversarial reviewer: verify grounding, trust, buyer fit, progression, and risk on the unified writer's four-touch sequences; only 'ready' passes.",
+      "sequence": 216,
+      "dependsOn": [
+        "morrow-email-drafter",
+        "morrow-email-finder",
+        "morrow-client-dossier",
+        "morrow-contact-discovery",
+        "morrow-boutique-growth-playbook",
+        "morrow-revenue-strategy",
+        "morrow-pipeline-capacity"
+      ],
+      "workspace": "openclaw-workspaces/salesv3-morrow-email-sequence-reviewer",
+      "agentDir": ".openclaw-agents/salesv3-morrow-email-sequence-reviewer/agent",
+      "model": "openai/gpt-5.5",
+      "modelFallbacks": [
+        "openai/gpt-5.4-mini"
+      ],
+      "thinking": "high",
+      "sourceUrls": [
+        "internal:morrow-positioning-context"
+      ],
+      "outputs": [
+        "review_summary",
+        "quality_rubric",
+        "global_findings",
+        "person_sequence_reviews",
+        "improved_person_email_sequences",
+        "recommended_send_order",
+        "reviewer_rules",
+        "claims_to_avoid",
+        "source_notes"
+      ],
+      "execution": "api-key",
+      "timeoutSeconds": 1800,
+      "executionTier": "lead",
+      "criticalPath": false,
+      "cadence": "per_lead",
+      "staleAfterHours": 72,
+      "maxRuntimeSeconds": 300,
+      "maxCostUsd": 0.5,
+      "benchmarkRequired": true,
+      "commercialTargetKey": "morrow",
+      "productName": "Morrow Robotics",
+      "projectDescription": "The user is building a Morrow Robotics sales pipeline: sell paid high-mix packing/kitting pilots that convert to monthly Robotics-as-a-Service contracts. The outbound deliverable is LinkedIn profiles plus connection request messages under 300 characters."
     }
   ],
   "commercialTargets": {
@@ -1930,6 +2717,100 @@
         "prefer regional ISPs, Canadian-exposed software platforms, and multi-site operators with a reachable workflow owner",
         "require at least 70% of customer-funded integration work to be reusable and reject unfunded bespoke features",
         "treat $40k MRR as a 60-120 day target composed of roughly two embedded customers at $10k MRR and four operational customers at $5k MRR"
+      ]
+    },
+    "morrow": {
+      "minimumMonthlyContractValueUsd": 5000,
+      "capacityPlanningMonthlyContractValueUsd": 8000,
+      "minimumEngagementLength": "paid packing/kitting pilot that converts to a monthly Robotics-as-a-Service (RaaS) contract",
+      "targetContractShape": "Land a paid 4-8 week packing or kitting pilot ($15k-$50k) on one live high-mix workflow, then convert it to a monthly Robotics-as-a-Service contract ($5k-$12k per cell) with guaranteed throughput.",
+      "outreachChannel": {
+        "primary": "linkedin_connection_request",
+        "maxChars": 300,
+        "rules": [
+          "The primary outbound asset is a LinkedIn connection request note of at most 300 characters (no links).",
+          "Every serious lead must carry a LinkedIn profile URL and a ready-to-send connection message under 300 characters.",
+          "Follow-up DMs after acceptance are also LinkedIn messages, short and specific."
+        ]
+      },
+      "qualificationFocus": [
+        "the account runs high-mix, still-manual secondary packing, kitting, repacking, or returns work that changes too often for fixed automation",
+        "there are two or more people per shift doing repetitive pick-and-place with several product or box configurations and frequent changeovers",
+        "the workflow has a clear pass/fail result and enough annual labour cost to justify a $100k-$250k automated cell or a monthly RaaS contract",
+        "there is a reachable operational owner (automation, continuous improvement, packaging, production, or fulfillment) who feels the labour and changeover pain",
+        "there is a practical path to filming or observing one workflow and running an on-site pilot with measured throughput and completion"
+      ],
+      "disqualifyWhen": [
+        "the work is fully standardized, extremely high-speed, sub-second fixed-line automation where one machine already works perfectly",
+        "the task needs true locomotion, whole-body control, or dexterous humanoid hands off-the-shelf grippers cannot do yet",
+        "the objects are raw-food contact, pharmaceutical primary packaging, or highly deformable/transparent items unsuitable for a first deployment",
+        "there is no manual high-mix packing/kitting workflow and no operational owner, only generic procurement intake"
+      ],
+      "monthlyRevenueFloorUsd": 50000,
+      "sellerCommissionRate": 0.1,
+      "sellerMonthlyIncomeTargetUsd": 10000,
+      "sellerRequiredClosedRevenueForTargetUsd": 100000,
+      "outboundCapacityAssumptions": {
+        "workingDaysPerMonth": 22,
+        "sequenceTouchesPerLead": 4,
+        "positiveReplyRate": 0.08,
+        "positiveReplyToQualifiedConversationRate": 0.55,
+        "qualifiedConversationToClosedDealRate": 0.2,
+        "pipelineInventoryBufferRate": 0.25,
+        "sendReadyBufferRate": 0.15,
+        "expectedNewLeadsPerProspectingRound": 40,
+        "maxRecommendedProspectingRounds": 40,
+        "contractBucketSplit": {
+          "short_term": 0.5,
+          "medium_term": 0.35,
+          "long_term": 0.15
+        }
+      },
+      "dealTiers": [
+        {
+          "tier": "pilot",
+          "monthlyValueUsdRange": [
+            15000,
+            50000
+          ],
+          "role": "paid 4-8 week proof-of-concept on one live packing/kitting workflow",
+          "targetSalesMotion": "automation, continuous improvement, packaging, or operations owner who can give access to one workflow and objects and wants measured throughput before committing",
+          "portfolioUse": "primary wedge; every account should be sold the pilot first"
+        },
+        {
+          "tier": "raas",
+          "monthlyValueUsdRange": [
+            5000,
+            12000
+          ],
+          "role": "monthly Robotics-as-a-Service contract for one automated cell with guaranteed productive hours",
+          "targetSalesMotion": "operations or plant owner who has seen a successful pilot and wants ongoing productive capacity without buying and maintaining hardware",
+          "portfolioUse": "recurring revenue base; the pilot converts into this"
+        },
+        {
+          "tier": "multi_cell",
+          "monthlyValueUsdRange": [
+            15000,
+            60000
+          ],
+          "role": "multi-cell or multi-site rollout across several workflows",
+          "targetSalesMotion": "operations director or VP who has proven one cell and wants to scale the same learning system across lines or facilities",
+          "portfolioUse": "highest-priority expansion once one cell is live and improving"
+        }
+      ],
+      "companySizeGuidance": {
+        "tooSmall": "operations with no repetitive manual packing/kitting and no annual labour cost to justify a cell",
+        "targetSmall": "co-packers and fulfillment shops with high-mix subscription boxes, multipacks, variety packs, kitting, or returns that change constantly",
+        "targetMedium": "CPG, food, cosmetics, and supplement manufacturers with variable secondary packing that stays manual despite existing line automation",
+        "targetLarge": "larger contract packagers and 3PLs only when a specific automation/CI owner and one bounded workflow are reachable",
+        "tooLarge": "broad enterprises where the only route is generic vendor intake and no packing/automation owner is identifiable"
+      },
+      "portfolioStrategy": [
+        "lead every account with a paid pilot on one bounded high-mix workflow, priced for measured throughput and completion",
+        "convert successful pilots into monthly RaaS so the moat is real deployment, failure, and recovery data",
+        "prioritize co-packers and fulfillment (high-mix, changeover-heavy) first, then CPG/food/cosmetics manufacturers",
+        "keep all pricing and seller economics internal unless the prospect directly asks",
+        "the outbound deliverable is a LinkedIn profile plus a connection message under 300 characters, never a cold email"
       ]
     }
   }

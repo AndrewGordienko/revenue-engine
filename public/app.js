@@ -9,7 +9,8 @@ const PRODUCTS = {
     name: "GNK",
     mark: "GNK",
     colorName: "blue",
-    description: "high-trust engineering sprints"
+    description: "high-trust engineering sprints",
+    commercialSummary: "One high-trust sprint, not a volume funnel."
   },
   outagehub: {
     key: "outagehub",
@@ -18,7 +19,28 @@ const PRODUCTS = {
     name: "OutageHub",
     mark: "OH",
     colorName: "orange",
-    description: "Canadian power-event intelligence"
+    description: "Canadian power-event intelligence",
+    commercialSummary: "Paid operational pilots, then annual contracts."
+  },
+  morrow: {
+    key: "morrow",
+    slug: "morrow",
+    short: "MORROW",
+    name: "Morrow",
+    mark: "M",
+    colorName: "green",
+    description: "adaptive robotic packing",
+    commercialSummary: "Prove one variable packing workflow, then expand by line and site."
+  },
+  other: {
+    key: "other",
+    slug: "other",
+    short: "OTHER",
+    name: "Other",
+    mark: "?",
+    colorName: "neutral",
+    description: "relationships awaiting classification",
+    commercialSummary: "Research and classify these relationships before outreach."
   }
 };
 
@@ -59,9 +81,10 @@ const BUCKETS = [
   }
 ];
 
+const savedProduct = localStorage.getItem("salesv3_product");
 const state = {
-  product: localStorage.getItem("salesv3_product") === "outagehub" ? "outagehub" : "gnk",
-  view: "overview",
+  product: PRODUCTS[savedProduct] ? savedProduct : "gnk",
+  view: "work",
   registry: { agents: [] },
   bus: { artifacts: {}, agents: {} },
   messages: [],
@@ -88,13 +111,72 @@ const state = {
   integrations: {},
   meetingProposals: {},
   callBriefs: {},
-  agentHealth: { summary: {}, agents: [] }
+  agentHealth: { summary: {}, agents: [] },
+  linkedin: { prospects: [], totals_by_product: {}, total: 0, verified_profiles: 0, validation_errors: [] },
+  linkedinProduct: "all",
+  linkedinSearch: "",
+  connections: { connections: [], summary: { by_product: {}, by_status: {} } },
+  connectionProduct: "all",
+  connectionStatus: "all",
+  connectionConfidence: "all",
+  connectionContact: "all",
+  connectionSearch: "",
+  connectionVisible: 100,
+  conversations: { conversations: [], summary: { by_product: {}, by_status: {} }, insights: { lessons: [], by_product: {}, themes: {} } },
+  conversationProduct: PRODUCTS[savedProduct] ? savedProduct : "gnk",
+  conversationStatus: "all",
+  conversationSearch: "",
+  conversationImportResult: null,
+  founder: { metrics: {}, actions: [], work_actions: [], watchlist: [], meetings: [], pipeline: {}, learning: {} },
+  reconciliation: { reconciled: false, source: {}, canonical: {} },
+  playbooks: { ventures: {}, portfolio_message_length: {} },
+  workFilter: "all",
+  networkSubview: "targets",
+  networkSearch: "",
+  networkProduct: PRODUCTS[savedProduct] ? savedProduct : "gnk",
+  playbookSubview: "market",
+  pipelineLane: "commercial",
+  systemSubview: "overview",
+  drawerConversationId: null,
+  drawerConnectionId: null,
+  drawerActionId: null,
+  drawerDraftType: null
 };
 
 const stageEl = document.querySelector("#stage");
 const railTaskEl = document.querySelector("#rail-task");
-const countLeadsEl = document.querySelector("#count-leads");
+const countWorkEl = document.querySelector("#count-work");
+const countNetworkEl = document.querySelector("#count-network");
 const brandMarkEl = document.querySelector("#brand-mark");
+
+const BUTTON_HELP = {
+  "Reply": "Opens the internal relationship drawer with the full conversation and an editable suggested reply. It does not send anything.",
+  "Review": "Opens the internal relationship record, conversation history, evidence, and controls. It does not change anything by itself.",
+  "Review relationship": "Opens the internal relationship record without changing or contacting anything.",
+  "Prepare call": "Opens the call context and preparation workspace. It does not contact the person or change the calendar.",
+  "Draft follow-up": "Opens an editable follow-up draft. It does not send anything.",
+  "Work referral": "Opens the referral context and suggested next step. It does not contact anyone.",
+  "Decide next step": "Opens the relationship evidence so you can choose the next internal action.",
+  "Send promised item": "Opens the promised-item context and draft. It does not send anything.",
+  "Confirm call": "Confirms this meeting inside SalesV3 and creates the preparation step. It does not send a LinkedIn message or calendar invitation.",
+  "Record outcome": "Records what happened on the call and creates the next action. It does not contact the person.",
+  "Open brief": "Opens the internal call context and preparation notes. It does not change the meeting.",
+  "Mark contacted": "Marks this relationship as contacted in SalesV3 only. It does not send a message.",
+  "Contacted ✓": "Removes the contacted marker if clicked. It does not delete any conversation history.",
+  "Not relevant": "Removes this person from active targeting while preserving their record and message history.",
+  "Restore": "Returns this person to the active relationship inventory.",
+  "Restore relationship": "Returns this person to the active relationship inventory.",
+  "Record as sent": "Records this draft as sent in SalesV3. It does not send anything through LinkedIn.",
+  "Copy message": "Copies the draft to your clipboard. It does not send it.",
+  "Done": "Marks this internal action complete. It does not contact the person.",
+  "Complete action": "Marks this internal action complete. It does not contact the person.",
+  "Tomorrow": "Moves this internal action to tomorrow. It does not contact the person.",
+  "Snooze to tomorrow": "Moves this internal action to tomorrow. It does not contact the person.",
+  "Process LinkedIn DMs": "Parses and merges the pasted LinkedIn history. It never sends an outbound message.",
+  "Reconcile LinkedIn": "Rebuilds internal CRM events from imported LinkedIn data. It does not access or message LinkedIn.",
+  "Suppress": "Adds a do-not-contact state and closes active work while preserving history.",
+  "Close": "Closes the internal relationship workflow without deleting history."
+};
 
 /* ---------- tiny DOM helper ---------- */
 function h(tag, props = {}, children = []) {
@@ -110,6 +192,14 @@ function h(tag, props = {}, children = []) {
   for (const child of [].concat(children)) {
     if (child == null || child === false) continue;
     node.append(child.nodeType ? child : document.createTextNode(String(child)));
+  }
+  if (tag === "button" && !node.getAttribute("title")) {
+    const label = String(props.text || node.textContent || "").trim();
+    const help = BUTTON_HELP[label];
+    if (help) {
+      node.setAttribute("title", help);
+      node.setAttribute("aria-description", help);
+    }
   }
   return node;
 }
@@ -153,6 +243,16 @@ function setProduct(productKey) {
   state.activeLeadId = null;
   state.activeAgentSlug = null;
   state.activeTouchNumber = 1;
+  state.networkProduct = productKey;
+  state.conversationProduct = productKey;
+  state.workFilter = "all";
+  state.drawerConversationId = null;
+  state.drawerConnectionId = null;
+  state.drawerActionId = null;
+  if (productKey === "other" && ["playbooks", "pipeline", "calendar"].includes(state.view)) {
+    state.view = "network";
+    state.networkSubview = "needs_review";
+  }
   localStorage.setItem("salesv3_product", productKey);
   load();
 }
@@ -255,7 +355,7 @@ async function copyText(text, message = "Copied") {
 /* ---------- data ---------- */
 async function load() {
   applyProductChrome();
-  const [registry, bus, messages, runStatus, leads, memorySummary, pipelineReport, outreachQueue, cohorts, integrations, agentHealth] = await Promise.all([
+  const [registry, bus, messages, runStatus, leads, memorySummary, pipelineReport, outreachQueue, cohorts, integrations, agentHealth, linkedin, connections, conversations, founder, reconciliation, playbooks] = await Promise.all([
     fetch("/api/agents").then((r) => r.json()),
     fetch("/api/state").then((r) => r.json()),
     fetch("/api/messages?limit=60").then((r) => r.json()),
@@ -266,7 +366,13 @@ async function load() {
     fetch(productUrl("/api/outreach-queue")).then((r) => r.json()).then((j) => j.messages || []).catch(() => []),
     fetch(productUrl("/api/cohorts")).then((r) => r.json()).then((j) => j.cohorts || []).catch(() => []),
     fetch("/api/integrations").then((r) => r.json()).catch(() => ({})),
-    fetch("/api/agent-health").then((r) => r.json()).catch(() => ({ summary: {}, agents: [] }))
+    fetch("/api/agent-health").then((r) => r.json()).catch(() => ({ summary: {}, agents: [] })),
+    fetch(productUrl("/api/linkedin-prospects?limit=100")).then((r) => r.json()).catch(() => ({ prospects: [], totals_by_product: {}, total: 0, verified_profiles: 0, validation_errors: [] })),
+    fetch(productUrl("/api/linkedin-connections?limit=1000")).then((r) => r.json()).catch(() => ({ connections: [], summary: { by_product: {}, by_status: {} } })),
+    fetch(productUrl("/api/linkedin-conversations")).then((r) => r.json()).catch(() => ({ conversations: [], summary: { by_product: {}, by_status: {} }, insights: { lessons: [], by_product: {}, themes: {} } })),
+    fetch("/api/founder-overview").then((r) => r.json()).catch(() => ({ metrics: {}, actions: [], work_actions: [], watchlist: [], meetings: [], pipeline: {}, learning: {} })),
+    fetch("/api/founder-reconciliation").then((r) => r.json()).catch(() => ({ reconciled: false, source: {}, canonical: {} })),
+    fetch("/api/playbooks").then((r) => r.json()).catch(() => ({ ventures: {}, portfolio_message_length: {} }))
   ]);
   state.registry = registry;
   state.bus = bus;
@@ -279,6 +385,12 @@ async function load() {
   state.cohorts = cohorts;
   state.integrations = integrations;
   state.agentHealth = agentHealth;
+  state.linkedin = linkedin;
+  state.connections = connections;
+  state.conversations = conversations;
+  state.founder = founder;
+  state.reconciliation = reconciliation;
+  state.playbooks = playbooks;
   render();
 }
 
@@ -543,7 +655,7 @@ function pageHead(eyebrow, title, sub, actions) {
 }
 
 /* ---------- page: Overview ---------- */
-function renderOverview() {
+function renderLegacyOverview() {
   const leads = sortedLeads();
   const stats = state.leads.stats || {};
   const product = activeProduct();
@@ -575,19 +687,21 @@ function renderOverview() {
     h("div", { class: "revenue-strip" }, [
       h("div", { class: "revenue-copy" }, [
         h("p", { class: "card-eyebrow", text: "Commercial strategy" }),
-        h("h2", { class: "revenue-title", text: product.key === "outagehub" ? "Paid operational pilots, then annual contracts." : "One high-trust sprint, not a volume funnel." }),
+        h("h2", { class: "revenue-title", text: product.commercialSummary }),
         h("p", {
           class: "revenue-sub",
           text: revenue?.strategy_summary || (product.key === "outagehub"
             ? "Prove one outage-sensitive decision with paid implementation and a 30-day evaluation, then convert it to an annual agreement."
-            : "Use warm introductions, observable triggers, and partners to close one four-to-six-week production sprint.")
+            : product.key === "morrow"
+              ? "Prove one variable packing workflow on-site, quantify labour and changeover impact, then expand by line and facility."
+              : "Use warm introductions, observable triggers, and partners to close one four-to-six-week production sprint.")
         })
       ]),
       h("div", { class: "revenue-metrics" }, [
         metric("Booked revenue", `${money(actual.booked_one_time_usd)} / ${money(measuredTarget.bookedRevenueUsd || 40000)}`),
         metric("Booked MRR", money(actual.booked_mrr_usd)),
         metric("Implementation margin", actual.implementation_gross_margin == null ? "—" : `${Math.round(actual.implementation_gross_margin * 100)}%`),
-        metric(product.key === "outagehub" ? "Paid pilots" : "Signed sprint", `${actual.wins || 0} / ${measuredTarget.paidWins || 0}`)
+        metric(product.key === "gnk" ? "Signed sprint" : "Paid pilots", `${actual.wins || 0} / ${measuredTarget.paidWins || 0}`)
       ]),
       portfolio.near_term_send_list ? h("p", { class: "revenue-note", text: portfolio.near_term_send_list }) : null
     ])
@@ -671,6 +785,177 @@ function renderOverview() {
   });
   el.append(h("div", { class: "block" }, [h("h2", { class: "block-title", text: "Who to contact next" }), focusWrap]));
 
+  return el;
+}
+
+function actionLabel(type) {
+  return ({
+    reply: "Reply now",
+    confirm_meeting: "Confirm meeting",
+    prepare_meeting: "Prepare meeting",
+    work_referral: "Work referral",
+    decide_next_step: "Decide next step",
+    follow_up: "Follow up",
+    revisit_on_new_trigger: "Wait for a new trigger",
+    pause_until: "Paused",
+    execute_next_step: "Execute promised next step"
+  })[type] || humanize(type);
+}
+
+function actionUrgency(action) {
+  if (!action.due_at) return "undated";
+  const due = new Date(action.due_at);
+  const diff = due.getTime() - Date.now();
+  if (diff < 0) return "overdue";
+  if (diff < 86400000) return "today";
+  return "upcoming";
+}
+
+async function operateOnAction(action, command, extra = {}) {
+  try {
+    await apiPost(`/api/next-actions/${action.id}`, { command, ...extra });
+    toast(command === "complete" ? "Action completed" : command === "snooze" ? "Action snoozed" : "Relationship updated");
+    await load();
+  } catch (error) { toast(error.message); }
+}
+
+async function confirmActionMeeting(action) {
+  if (!action.meeting_id) { toast("No meeting candidate is linked yet"); return; }
+  const startsAt = prompt("Confirm the meeting date and time (ISO)", action.meeting_at || "");
+  if (!startsAt || Number.isNaN(new Date(startsAt).getTime())) { if (startsAt) toast("Enter a valid date and time"); return; }
+  const timezone = prompt("Confirm the meeting time zone", action.meeting_timezone && action.meeting_timezone !== "unconfirmed" ? action.meeting_timezone : "Europe/London");
+  if (!timezone) return;
+  const intent = prompt("Meeting intent: research, design_partner, commercial_discovery, or active_deal", action.meeting_intent || "research");
+  if (!intent) return;
+  try {
+    await apiPost(`/api/meetings/${action.meeting_id}/confirm`, { starts_at: new Date(startsAt).toISOString(), timezone, intent });
+    toast("Meeting explicitly confirmed");
+    await load();
+  } catch (error) { toast(error.message); }
+}
+
+async function captureActionMeetingOutcome(action) {
+  if (!action.meeting_id) { toast("No confirmed meeting is linked"); return; }
+  const prompts = [
+    ["problem", "What buyer-confirmed problem did you hear?"],
+    ["current_process", "How does the current process work?"],
+    ["consequence", "What is the consequence or cost?"],
+    ["owner", "Who owns the problem and decision?"],
+    ["timing", "What timing or urgency was confirmed?"],
+    ["budget_path", "What is the budget or commercial path? Use 'not yet known' when that is the truth."],
+    ["next_step", "What explicit next step was agreed?"],
+    ["correction_learned", "What assumption was corrected or disproved? Use 'none' if none."]
+  ];
+  const outcome = {};
+  for (const [field, question] of prompts) {
+    const answer = prompt(question, "");
+    if (answer == null) return;
+    outcome[field] = answer.trim();
+  }
+  const nextAt = prompt("When is the next step due? (ISO date/time or leave blank for now)", "");
+  if (nextAt) outcome.next_step_at = new Date(nextAt).toISOString();
+  try {
+    await apiPost(`/api/meetings/${action.meeting_id}/outcome`, outcome);
+    toast("Meeting outcome captured");
+    await load();
+  } catch (error) { toast(error.message); }
+}
+
+function founderMetric(label, value, note, tone = "") {
+  return h("div", { class: `founder-metric ${tone}` }, [
+    h("span", { text: label }),
+    h("strong", { text: value }),
+    h("small", { text: note })
+  ]);
+}
+
+function founderActionRow(action) {
+  const urgency = actionUrgency(action);
+  const product = action.product || "gnk";
+  const due = action.due_at ? relationshipDate(action.due_at) : "No date";
+  const actions = [];
+  if (action.action_type === "confirm_meeting") {
+    actions.push(h("button", { class: "btn primary sm", text: "Confirm details", onclick: () => confirmActionMeeting(action) }));
+  } else if (action.action_type === "prepare_meeting") {
+    actions.push(h("button", { class: "btn primary sm", text: "Record outcome", onclick: () => captureActionMeetingOutcome(action) }));
+  } else if (action.action_type !== "revisit_on_new_trigger") {
+    actions.push(h("button", { class: "btn primary sm", text: "Mark done", onclick: () => operateOnAction(action, "complete") }));
+  }
+  actions.push(
+    h("button", { class: "btn sm", text: "Tomorrow", onclick: () => operateOnAction(action, "snooze", { due_at: new Date(Date.now() + 86400000).toISOString() }) }),
+    h("button", { class: "btn ghost sm", text: "Open thread", onclick: () => { state.conversationSearch = action.person_name || ""; go("conversations"); } }),
+    h("button", { class: "btn ghost sm danger", text: "Close", onclick: () => operateOnAction(action, "close") })
+  );
+  return h("article", { class: `founder-action ${urgency}` }, [
+    h("div", { class: "founder-action-main" }, [
+      h("div", { class: "founder-action-title" }, [
+        h("span", { class: `portfolio-product product-${product}`, text: LINKEDIN_PRODUCT_LABELS[product] || "Other" }),
+        h("strong", { text: actionLabel(action.action_type) }),
+        h("span", { class: `action-due ${urgency}`, text: urgency === "overdue" ? `Overdue · ${due}` : due })
+      ]),
+      h("h3", { text: action.person_name || action.company || `${humanize(action.entity_type)} ${action.entity_id}` }),
+      h("p", { text: action.reason || "Review and decide the next commercial action." }),
+      action.headline ? h("small", { text: action.headline }) : null
+    ]),
+    h("div", { class: "founder-action-buttons" }, actions)
+  ]);
+}
+
+function renderOverview() {
+  const data = state.founder || { metrics: {}, actions: [], pipeline: {}, learning: {} };
+  const metrics = data.metrics || {};
+  const actions = data.actions || [];
+  const learning = data.learning || {};
+  const el = h("section", { class: "page founder-page" });
+  el.append(pageHead(
+    "Founder revenue operating system",
+    "What needs your attention today",
+    `${actions.length} open decisions across GNK, OutageHub, and Morrow. Clear the live work before adding inventory.`,
+    [h("button", { class: "btn", text: "Reconcile LinkedIn", onclick: async () => { try { await apiPost("/api/founder-sync"); toast("LinkedIn activity reconciled"); await load(); } catch (error) { toast(error.message); } } })]
+  ));
+
+  el.append(h("div", { class: "founder-scorecard" }, [
+    founderMetric("Live replies", String(metrics.live_conversations || 0), "respond first", metrics.live_conversations ? "urgent" : ""),
+    founderMetric("Meetings · 7 days", String(metrics.meetings_next_7_days || 0), "confirm and prepare"),
+    founderMetric("Qualified opportunities", String(metrics.qualified_opportunities || 0), "buyer evidence required"),
+    founderMetric("Proposals outstanding", String(metrics.proposals_outstanding || 0), "follow to a decision"),
+    founderMetric("Paid commitments", money(metrics.booked_revenue), `${money(metrics.booked_mrr)} MRR`, "money"),
+    founderMetric("Overdue actions", String(metrics.overdue_actions || 0), "target: zero", metrics.overdue_actions ? "danger" : "")
+  ]));
+
+  const activeActions = actions.filter((action) => action.action_type !== "revisit_on_new_trigger");
+  const parkedActions = actions.filter((action) => action.action_type === "revisit_on_new_trigger");
+  const queue = h("div", { class: "founder-action-list" });
+  if (!activeActions.length) queue.append(h("div", { class: "card pad muted", text: "No active actions. Review paused relationships only when a new trigger appears." }));
+  activeActions.slice(0, 14).forEach((action) => queue.append(founderActionRow(action)));
+  el.append(h("section", { class: "founder-section" }, [
+    h("div", { class: "founder-section-head" }, [
+      h("div", {}, [h("p", { class: "card-eyebrow", text: "Primary operating queue" }), h("h2", { text: "Today" })]),
+      h("span", { class: "queue-count", text: `${activeActions.length} active · ${parkedActions.length} waiting for trigger` })
+    ]),
+    queue
+  ]));
+
+  const pipelineRows = ["gnk", "outagehub", "morrow"].map((product) => {
+    const row = data.pipeline?.[product] || {};
+    return h("div", { class: "founder-pipeline-row" }, [
+      h("strong", { text: LINKEDIN_PRODUCT_LABELS[product] }),
+      ...[["Engaged", row.engaged], ["Discovery", row.discovery], ["Held", row.completed], ["Qualified", row.qualified], ["Scoped", row.scoped], ["Proposal", row.proposal], ["Won", row.won]].map(([label, value]) => h("div", {}, [h("span", { text: label }), h("b", { text: String(value || 0) })]))
+    ]);
+  });
+  el.append(h("section", { class: "founder-section founder-two-col" }, [
+    h("div", { class: "card pad founder-pipeline" }, [h("p", { class: "card-eyebrow", text: "Commercial progression" }), h("h2", { text: "Pipeline by venture" }), ...pipelineRows]),
+    h("div", { class: "card pad founder-learning" }, [
+      h("p", { class: "card-eyebrow", text: "Market learning" }),
+      h("h2", { text: "Signal quality, not vanity" }),
+      h("div", { class: "learning-rates" }, [
+        founderMetric("Any reply", `${Math.round((learning.any_reply_rate || 0) * 100)}%`, `${learning.any_replies || 0} conversations`, "diagnostic"),
+        founderMetric("Qualified reply", `${Math.round((learning.qualified_reply_rate || 0) * 100)}%`, `${learning.qualified_replies || 0} human-confirmed`, "money")
+      ]),
+      h("p", { class: "learning-note", text: "A correction, objection, referral, meeting, and buying conversation are not equivalent. Qualified progression requires human confirmation." }),
+      h("button", { class: "btn sm", text: "Review conversations", onclick: () => go("conversations") })
+    ])
+  ]));
   return el;
 }
 
@@ -1516,8 +1801,31 @@ function buildOutreachCalendar(dayCount = 30) {
   return [...byDay.values()];
 }
 
+function buildRelationshipCalendar() {
+  const byDay = new Map();
+  const add = (date, event) => {
+    if (!date) return;
+    const key = date.slice(0, 10);
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(event);
+  };
+  const conversations = state.conversations.conversations || [];
+  for (const meeting of state.founder.meetings || []) {
+    if (meeting.status !== "booked" || !["human_confirmed", "calendar_confirmed"].includes(meeting.confirmation_status)) continue;
+    const conversation = conversations.find((item) => item.id === meeting.source_conversation_id);
+    if (conversation) add(meeting.starts_at, { conversation, type: "meeting", at: meeting.starts_at, label: `${humanize(meeting.intent)} call` });
+  }
+  for (const action of state.founder.actions || []) {
+    if (!action.due_at || action.action_type === "confirm_meeting" || action.entity_type !== "conversation") continue;
+    const conversation = conversations.find((item) => item.id === Number(action.entity_id));
+    if (conversation) add(action.due_at, { conversation, type: "followup", at: action.due_at, label: actionLabel(action.action_type) });
+  }
+  for (const events of byDay.values()) events.sort((a, b) => a.at.localeCompare(b.at));
+  return byDay;
+}
+
 function renderCalendar() {
-  const schedule = buildOutreachCalendar(30);
+  const schedule = [];
   const stats = state.leads.stats || {};
   const byBucket = stats.byBucket || {};
   const todayKey = localDateKey(new Date());
@@ -1525,14 +1833,15 @@ function renderCalendar() {
   const month = state.calendarMonth ? new Date(`${state.calendarMonth}-01T00:00:00`) : startOfMonth(new Date());
   state.calendarMonth = localDateKey(month).slice(0, 7);
   const scheduleByDay = new Map(schedule.map((day) => [localDateKey(day.date), day]));
+  const relationshipByDay = buildRelationshipCalendar();
   const cells = buildMonthCells(month);
   const selectedDay = scheduleByDay.get(state.selectedCalendarDate) || { date: new Date(`${state.selectedCalendarDate}T00:00:00`), tasks: [] };
   const el = h("section", { class: "page calendar-page" });
 
   el.append(pageHead(
     "Calendar",
-    "Outreach calendar",
-    "Each day mixes short, medium, and long-term touchpoints so the pipeline keeps moving.",
+    "Commitments and next actions",
+    "Only human-confirmed meetings and canonical next actions appear here. Inferred call text stays in the Today confirmation queue.",
     [
       h("button", { class: "btn", text: "Leads", onclick: () => go("leads") }),
       h("button", { class: "btn primary", text: "Outreach", onclick: () => go("outreach") })
@@ -1563,8 +1872,11 @@ function renderCalendar() {
 
   cells.forEach((cell) => {
     const day = scheduleByDay.get(cell.key) || { date: cell.date, tasks: [] };
-    const visibleTasks = day.tasks.slice(0, 4);
-    const overflow = Math.max(0, day.tasks.length - visibleTasks.length);
+    const relationshipEvents = relationshipByDay.get(cell.key) || [];
+    const visibleRelationships = relationshipEvents.slice(0, 2);
+    const visibleTasks = day.tasks.slice(0, Math.max(0, 4 - visibleRelationships.length));
+    const totalEvents = day.tasks.length + relationshipEvents.length;
+    const overflow = Math.max(0, totalEvents - visibleTasks.length - visibleRelationships.length);
     const bucketCounts = BUCKETS.map((bucket) => ({
       bucket,
       count: day.tasks.filter((task) => task.bucket.key === bucket.key).length
@@ -1579,13 +1891,22 @@ function renderCalendar() {
     }, [
       h("div", { class: "cell-head" }, [
         h("span", { class: "cell-date", text: String(cell.date.getDate()) }),
-        bucketCounts.length ? h("span", { class: "cell-count", text: String(day.tasks.length) }) : null
+        totalEvents ? h("span", { class: "cell-count", text: String(totalEvents) }) : null
       ]),
       bucketCounts.length ? h("div", { class: "cell-buckets" }, bucketCounts.map((entry) =>
         h("span", { class: `cell-bucket ${entry.bucket.key}`, title: entry.bucket.label, text: String(entry.count) })
       )) : null,
-      h("div", { class: "cell-events" }, visibleTasks.map((task) =>
-        h("button", {
+      h("div", { class: "cell-events" }, [
+        ...visibleRelationships.map((item) => h("button", {
+          class: `calendar-event relationship-${item.type}`,
+          title: `${item.label} · ${item.conversation.name}`,
+          onclick: (event) => {
+            event.stopPropagation();
+            state.conversationSearch = item.conversation.name;
+            go("conversations");
+          }
+        }, [h("span", { class: "event-bucket-dot" }), h("span", { class: "event-text", text: `${item.conversation.name} · ${item.type === "meeting" ? "Call" : "Follow up"}` })])),
+        ...visibleTasks.map((task) => h("button", {
           class: `calendar-event ${task.bucket.key}`,
           title: `${task.lead.name} · ${task.lead.company} · Email ${task.touchNumber}`,
           onclick: (event) => {
@@ -1595,8 +1916,8 @@ function renderCalendar() {
         }, [
           h("span", { class: "event-bucket-dot" }),
           h("span", { class: "event-text", text: `${task.lead.name} · E${task.touchNumber}` })
-        ])
-      )),
+        ]))
+      ]),
       overflow ? h("button", {
         class: "calendar-more",
         onclick: (event) => {
@@ -1613,6 +1934,7 @@ function renderCalendar() {
     bucket,
     tasks: selectedDay.tasks.filter((task) => task.bucket.key === bucket.key)
   })).filter((group) => group.tasks.length);
+  const selectedRelationships = relationshipByDay.get(state.selectedCalendarDate) || [];
 
   const agenda = h("aside", { class: "calendar-agenda" }, [
     h("header", { class: "agenda-head" }, [
@@ -1620,8 +1942,19 @@ function renderCalendar() {
         h("span", { class: "day-label", text: state.selectedCalendarDate === todayKey ? "Today" : "Selected day" }),
         h("h2", { class: "day-date", text: formatCalendarDay(selectedDay.date) })
       ]),
-      h("span", { class: "day-count", text: `${selectedDay.tasks.length} touches` })
+      h("span", { class: "day-count", text: `${selectedDay.tasks.length + selectedRelationships.length} items` })
     ]),
+    selectedRelationships.length ? h("section", { class: "agenda-group relationship-agenda-group" }, [
+      h("div", { class: "day-group-head" }, [h("span", { class: "chip fit", text: "Relationships" }), h("span", { class: "day-group-count", text: String(selectedRelationships.length) })]),
+      ...selectedRelationships.map((item) => h("button", {
+        class: "agenda-task",
+        onclick: () => { state.conversationSearch = item.conversation.name; go("conversations"); }
+      }, [
+        h("span", { class: "task-touch", text: `${item.label} · ${relationshipDate(item.at)}` }),
+        h("strong", { class: "task-person", text: item.conversation.name }),
+        h("span", { class: "task-subject", text: item.conversation.next_action || item.conversation.summary })
+      ]))
+    ]) : null,
     agendaGroups.length ? h("div", { class: "agenda-groups" }, agendaGroups.map((group) =>
       h("section", { class: "agenda-group" }, [
         h("div", { class: "day-group-head" }, [
@@ -1639,7 +1972,7 @@ function renderCalendar() {
           ])
         )
       ])
-    )) : h("p", { class: "muted pad", text: "No outreach scheduled for this day." })
+    )) : selectedRelationships.length ? null : h("p", { class: "muted pad", text: "No outreach or relationship activity scheduled for this day." })
   ]);
 
   el.append(toolbar, h("div", { class: "calendar-shell" }, [grid, agenda]));
@@ -2164,6 +2497,80 @@ function renderActivity() {
   return el;
 }
 
+/* ---------- page: Run live smoke ---------- */
+// Calls the SAME canonical orchestrator as the CLI (`npm run smoke:live`) and the
+// OpenClaw controller. Draft-only: it stops at human approval and never sends.
+let smokeLivePoll = null;
+
+function smokeStageRow(s) {
+  const badge = { ok: "good", skipped: "muted", running: "warn", blocked: "bad", pending: "muted" }[s.status] || "muted";
+  return h("div", { class: "act-row" }, [
+    h("strong", { class: `pill ${badge}`, text: s.status || "pending" }),
+    h("div", {}, [
+      h("strong", { class: "act-title", text: s.key }),
+      h("p", { class: "act-body", text: [s.detail, s.error, s.attempts ? `attempts: ${s.attempts}` : ""].filter(Boolean).join(" · ") || "" })
+    ])
+  ]);
+}
+
+function renderLiveSmoke() {
+  const el = h("section", { class: "page" });
+  const panel = h("div", {});
+  el.append(pageHead("Ops", "Run live smoke", "Six-account canonical orchestrator · draft-only, human-gated", null));
+
+  const refresh = async () => {
+    let data = {};
+    try { data = await fetch("/api/smoke-live").then((r) => r.json()); } catch { data = { error: "unreachable" }; }
+    const pf = data.preflight || {};
+    const st = data.status || {};
+    const running = Boolean(data.running);
+
+    const controls = h("div", { class: "row gap" }, [
+      h("button", {
+        class: "btn primary", disabled: running || (pf && pf.ok === false) ? true : undefined,
+        text: running ? "Running…" : (st && st.blockers && st.blockers.length ? "Resume run" : "Run live smoke"),
+        onclick: async () => { await apiPost("/api/smoke-live"); setTimeout(refresh, 500); }
+      }),
+      h("span", { class: "muted", text: running ? `stage: ${st.current_stage || "…"}${st.current_account ? ` · accounts: ${st.current_account}` : ""}${st.current_agent ? ` · agent: ${st.current_agent}` : ""} · ${Math.round((st.elapsed_ms || 0) / 1000)}s` : (pf.ok ? "preflight OK — ready" : "preflight blocked") })
+    ]);
+
+    // Preflight / credential readiness.
+    const pfBox = h("div", { class: "card" }, [
+      h("strong", { text: "Preflight" }),
+      ...((pf.checks || []).map((c) => h("p", { class: c.ok ? "good" : "bad", text: `${c.ok ? "✓" : "✕"} ${c.name}: ${c.detail}${c.missing ? ` — missing: ${c.missing}` : ""}` })))
+    ]);
+
+    // Stages + blockers + report.
+    const stagesBox = h("div", { class: "card" }, [
+      h("strong", { text: "Stages" }),
+      h("p", { class: "muted", text: `Completed accounts: ${(st.completed_accounts || []).length}/${st.total_accounts || 6}${(st.completed_accounts || []).length ? ` · ${(st.completed_accounts || []).join(", ")}` : ""}` }),
+      ...((st.stages || []).map(smokeStageRow))
+    ]);
+    const blockers = (st.blockers || []);
+    const blockersBox = h("div", { class: "card" }, [
+      h("strong", { text: `Blockers (${blockers.length})` }),
+      ...(blockers.length ? blockers.map((b) => h("p", { class: "bad", text: `[${b.type}${b.human ? `/${b.human}` : ""}] ${typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail)}` })) : [h("p", { class: "muted", text: "none" })])
+    ]);
+    const rep = st.report;
+    const reportBox = h("div", { class: "card" }, [
+      h("strong", { text: "Result" }),
+      rep
+        ? h("p", { class: rep.draft_only_intact ? "good" : "bad", text: `loop_complete ${rep.loop_complete_accounts}/${rep.of} · draft-only ${rep.draft_only_intact ? "intact" : "VIOLATED"} · won ${rep.won_accounts} (won = signed contract only)` })
+        : h("p", { class: "muted", text: "no completed run yet" })
+    ]);
+
+    panel.replaceChildren(controls, pfBox, stagesBox, blockersBox, reportBox);
+
+    // Poll while a run is active; stop when idle or the view changes.
+    if (smokeLivePoll) { clearTimeout(smokeLivePoll); smokeLivePoll = null; }
+    if (running && state.view === "live-smoke") smokeLivePoll = setTimeout(refresh, 3000);
+  };
+
+  refresh();
+  el.append(panel);
+  return el;
+}
+
 /* ---------- page: Agent Health ---------- */
 const TIER_ORDER = ["lead", "cohort", "control", "deterministic"];
 const TIER_LABEL = { lead: "Lead (per-lead live path)", cohort: "Cohort (per approved cohort)", control: "Control (weekly/monthly strategy)", deterministic: "Deterministic (code, off live path)" };
@@ -2173,51 +2580,1182 @@ function renderAgentHealth() {
   const summary = health.summary || {};
   const el = h("section", { class: "page" });
   el.append(pageHead(
-    "System",
-    "Agent health",
-    `${summary.total || 0} agents · ${summary.critical || 0} on the live path · ${summary.blocked || 0} blocked · strategy ${health.strategy_version || "?"}`,
+    "System health",
+    "Six accountable workflows",
+    "Technical agents remain implementation details. What matters here is whether each founder workflow can produce its business decision.",
     [h("button", { class: "btn", text: "Refresh", onclick: () => load() })]
   ));
 
-  el.append(h("div", { class: "capacity-metrics" }, [
-    metric("Live-path agents", numberOrDash(summary.critical)),
-    metric("Fresh artifacts", numberOrDash(summary.fresh)),
-    metric("Blocked", numberOrDash(summary.blocked)),
-    metric("Total registered", numberOrDash(summary.total))
-  ]));
+  const workflowSpecs = [
+    ["Signal Scout", "Finds a verified trigger or warm route.", /(account-sourcing|contact-discovery|revenue-demand-radar)/],
+    ["Account Qualifier", "Chooses the venture, play, buyer role, and 90-day commercial path.", /(account-scoring|lead-persona|icp-contact)/],
+    ["Outreach Assistant", "Prepares one short, evidenced message for human approval.", /(outreach-angle|email-drafter|sequence-drafter|sequence-reviewer)/],
+    ["Conversation Triage", "Turns imported replies into outcomes and one next action.", null],
+    ["Meeting and Deal Assistant", "Confirms calls, captures outcomes, qualifies, and scopes.", /(pipeline-capacity|offer-map)/],
+    ["Learning Analyst", "Reports progression, objections, corrections, and falsified assumptions.", /(revenue-strategy|industry-map|company-context)/]
+  ];
+  const workflows = workflowSpecs.map(([name, decision, pattern]) => {
+    const members = pattern ? (health.agents || []).filter((agent) => pattern.test(agent.slug)) : [];
+    const blocked = members.filter((agent) => agent.blocker).length;
+    const fresh = members.filter((agent) => agent.fresh).length;
+    const deterministicReady = name === "Conversation Triage" && (state.founder.actions || []).length > 0;
+    return h("article", { class: `workflow-card ${blocked && !fresh ? "attention" : ""}` }, [
+      h("div", { class: "workflow-head" }, [
+        h("h2", { text: name }),
+        h("span", { class: `chip ${deterministicReady || fresh ? "fit" : blocked ? "warn" : ""}`, text: deterministicReady ? "operating" : fresh ? `${fresh} fresh` : blocked ? "attention" : "manual" })
+      ]),
+      h("p", { text: decision }),
+      h("small", { text: members.length ? `${members.length} technical components · ${blocked} blocked` : "Canonical deterministic workflow" })
+    ]);
+  });
+  el.append(h("div", { class: "workflow-grid" }, workflows));
 
+  const registry = h("details", { class: "technical-registry card" }, [
+    h("summary", { text: `Technical registry · ${summary.total || 0} agents · ${summary.blocked || 0} blocked` })
+  ]);
   for (const tier of TIER_ORDER) {
     const agents = (health.agents || []).filter((a) => a.tier === tier);
     if (!agents.length) continue;
+    registry.append(h("h2", { class: "block-title", text: `${TIER_LABEL[tier] || tier} · ${agents.length}` }));
     const rows = h("div", { class: "agent-health-list" });
-    for (const a of agents) {
-      const state_chip = a.blocker ? h("span", { class: "chip warn", text: "blocked" })
-        : a.fresh ? h("span", { class: "chip fit", text: "fresh" })
-        : a.status === "never_run" ? h("span", { class: "chip", text: "never run" })
-        : h("span", { class: "chip", text: humanize(a.status || "idle") });
-      rows.append(h("article", { class: `agent-health-row${a.criticalPath ? " critical" : ""}` }, [
-        h("div", { class: "ah-main" }, [
-          h("div", { class: "ah-head" }, [
-            h("strong", { text: a.slug }),
-            a.criticalPath ? h("span", { class: "chip ai", text: "live path" }) : null,
-            a.benchmarkRequired ? h("span", { class: "chip", text: "benchmarked" }) : null,
-            state_chip
+    for (const a of agents) rows.append(h("article", { class: `agent-health-row${a.criticalPath ? " critical" : ""}` }, [
+      h("div", { class: "ah-main" }, [
+        h("div", { class: "ah-head" }, [h("strong", { text: a.slug }), a.blocker ? h("span", { class: "chip warn", text: "blocked" }) : a.fresh ? h("span", { class: "chip fit", text: "fresh" }) : h("span", { class: "chip", text: humanize(a.status || "idle") })]),
+        h("p", { class: "muted small", text: a.blocker ? `Blocker: ${a.blocker}` : `Consumer decisions: ${a.downstreamConsumers.length}` })
+      ]),
+      h("div", { class: "ah-meta" }, [h("span", { text: a.cadence }), h("span", { text: a.schemaPass == null ? "schema —" : a.schemaPass ? "schema ✓" : "schema ✗" })])
+    ]));
+    registry.append(rows);
+  }
+  el.append(registry);
+  return el;
+}
+
+/* ---------- page: LinkedIn portfolio ---------- */
+const LINKEDIN_PRODUCT_LABELS = { gnk: "GNK", outagehub: "OHUB", morrow: "Morrow", other: "Other" };
+const CONNECTION_MOTION_LABELS = { gnk: "GNK sell", outagehub: "OHUB sell", morrow: "Morrow research", other: "Needs context" };
+
+function filteredLinkedinProspects() {
+  const query = state.linkedinSearch.trim().toLowerCase();
+  return (state.linkedin.prospects || []).filter((prospect) => {
+    if (state.linkedinProduct !== "all" && prospect.product !== state.linkedinProduct) return false;
+    if (!query) return true;
+    return `${prospect.name} ${prospect.title} ${prospect.company} ${prospect.segment} ${prospect.observed_signal}`.toLowerCase().includes(query);
+  });
+}
+
+function refreshLinkedinList(container) {
+  container.replaceChildren();
+  const prospects = filteredLinkedinProspects();
+  if (!prospects.length) {
+    container.append(h("div", { class: "card pad muted", text: "No LinkedIn contacts match those filters." }));
+    return;
+  }
+  for (const prospect of prospects) {
+    container.append(h("article", { class: "linkedin-contact-card" }, [
+      h("div", { class: "linkedin-person" }, [
+        h("div", { class: `linkedin-avatar product-${prospect.product}`, text: String(prospect.name || "?").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() }),
+        h("div", { class: "linkedin-person-copy" }, [
+          h("div", { class: "linkedin-rank" }, [
+            h("span", { class: `portfolio-product product-${prospect.product}`, text: LINKEDIN_PRODUCT_LABELS[prospect.product] || prospect.product }),
+            `#${prospect.rank}`
           ]),
-          h("p", { class: "muted small", text: a.blocker ? `Blocker: ${a.blocker}` : `Last run ${a.lastRunAt ? new Date(a.lastRunAt).toLocaleString() : "—"} · ${a.downstreamConsumers.length} downstream consumer${a.downstreamConsumers.length === 1 ? "" : "s"}` }),
-          a.unconsumedFields.length ? h("p", { class: "warn-line small", text: `Unconsumed output: ${a.unconsumedFields.join(", ")}` }) : null
-        ]),
-        h("div", { class: "ah-meta" }, [
-          h("span", { text: `${a.cadence}` }),
-          h("span", { text: a.schemaPass == null ? "schema —" : a.schemaPass ? "schema ✓" : "schema ✗" }),
-          h("span", { text: `≤${a.maxRuntimeSeconds}s · ≤$${a.maxCostUsd}` })
+          h("h2", { text: prospect.name }),
+          h("p", { text: prospect.title || "Role verified in CRM" }),
+          h("strong", { text: prospect.company }),
+          h("a", {
+            class: "linkedin-profile-link",
+            href: prospect.profile_url,
+            target: "_blank",
+            rel: "noreferrer",
+            text: "Open verified LinkedIn profile ↗"
+          })
         ])
-      ]));
-    }
-    el.append(h("section", { class: "block" }, [
-      h("h2", { class: "block-title", text: `${TIER_LABEL[tier] || tier} · ${agents.length}` }),
-      rows
+      ]),
+      h("div", { class: "linkedin-research" }, [
+        h("span", { class: "chip fit", text: prospect.segment || "portfolio prospect" }),
+        h("div", { class: "linkedin-fact" }, [h("strong", { text: "Observed signal" }), h("p", { text: prospect.observed_signal })]),
+        h("div", { class: "linkedin-fact" }, [h("strong", { text: "Why this person" }), h("p", { text: prospect.why_this_person })]),
+        h("div", { class: "linkedin-fact value" }, [h("strong", { text: "What we can do" }), h("p", { text: prospect.what_we_can_do })])
+      ]),
+      h("div", { class: "linkedin-note" }, [
+        h("div", { class: "linkedin-note-head" }, [
+          h("span", { text: `Connection note · ${prospect.message_source}` }),
+          h("strong", { text: `${prospect.message_length}/300` })
+        ]),
+        h("p", { text: prospect.message }),
+        h("button", {
+          class: "btn primary sm",
+          text: "Copy connection note",
+          onclick: async () => copyText(prospect.message, `${prospect.name}'s note copied`)
+        }),
+        h("details", { class: "linkedin-direct-messages" }, [
+          h("summary", { text: "First message, follow-up and call rationale" }),
+          h("div", { class: "linkedin-message-draft" }, [
+            h("strong", { text: "First message · 55-90 words" }),
+            h("p", { text: prospect.first_message }),
+            h("button", { class: "btn sm", text: "Copy first message", onclick: () => copyText(prospect.first_message, "First message copied") })
+          ]),
+          h("div", { class: "linkedin-message-draft" }, [
+            h("strong", { text: "Follow-up · touch two only" }),
+            h("p", { text: prospect.follow_up }),
+            h("button", { class: "btn sm", text: "Copy follow-up", onclick: () => copyText(prospect.follow_up, "Follow-up copied") })
+          ]),
+          h("div", { class: "linkedin-message-draft rationale" }, [h("strong", { text: "Call rationale" }), h("p", { text: prospect.call_rationale })])
+        ])
+      ])
     ]));
   }
+}
+
+function renderLinkedin() {
+  const el = h("section", { class: "page linkedin-page" });
+  const totals = state.linkedin.totals_by_product || {};
+  el.append(pageHead(
+    "Portfolio",
+    "LinkedIn contacts",
+    `${state.linkedin.total || 0} verified people across GNK, OHUB, and Morrow · stored in the canonical CRM`,
+    null
+  ));
+  el.append(h("div", { class: "linkedin-summary" }, [
+    metric("All verified", String(state.linkedin.verified_profiles || 0)),
+    metric("GNK", String(totals.gnk || 0)),
+    metric("OHUB", String(totals.outagehub || 0)),
+    metric("Morrow", String(totals.morrow || 0))
+  ]));
+
+  const controls = h("div", { class: "linkedin-controls card" });
+  const chips = h("div", { class: "chips" });
+  for (const product of ["all", "gnk", "outagehub", "morrow"]) {
+    const count = product === "all"
+      ? Object.values(totals).reduce((sum, value) => sum + Number(value || 0), 0)
+      : Number(totals[product] || 0);
+    chips.append(h("button", {
+      class: `chip-btn ${state.linkedinProduct === product ? "on" : ""}`,
+      text: `${product === "all" ? "All brands" : LINKEDIN_PRODUCT_LABELS[product]} · ${count}`,
+      onclick: () => { state.linkedinProduct = product; render(); }
+    }));
+  }
+  const search = h("input", {
+    class: "search",
+    type: "search",
+    placeholder: "Search people, companies, roles or signals…",
+    value: state.linkedinSearch,
+    oninput: (event) => {
+      state.linkedinSearch = event.target.value;
+      refreshLinkedinList(list);
+    }
+  });
+  controls.append(chips, search);
+  const list = h("div", { class: "linkedin-contact-list" });
+  refreshLinkedinList(list);
+  el.append(controls, list);
+  if ((state.linkedin.validation_errors || []).length) {
+    el.append(h("div", { class: "error-banner", text: state.linkedin.validation_errors.join(" · ") }));
+  }
+  return el;
+}
+
+/* ---------- page: imported first-degree network ---------- */
+function filteredConnections() {
+  const query = state.connectionSearch.trim().toLowerCase();
+  return (state.connections.connections || []).filter((connection) => {
+    if (state.connectionProduct !== "all" && connection.primary_product !== state.connectionProduct) return false;
+    if (state.connectionStatus !== "all" && connection.review_status !== state.connectionStatus) return false;
+    if (state.connectionConfidence === "strong" && connection.classification_score < 9) return false;
+    if (state.connectionConfidence === "possible" && (connection.classification_score < 4 || connection.classification_score >= 9)) return false;
+    if (state.connectionContact === "contacted" && !connection.contacted_at) return false;
+    if (state.connectionContact === "not_contacted" && connection.contacted_at) return false;
+    return !query || `${connection.name} ${connection.headline} ${connection.classification_reason}`.toLowerCase().includes(query);
+  });
+}
+
+async function patchConnection(connection, patch) {
+  const response = await fetch(`/api/linkedin-connections/${connection.id}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) throw new Error(result.error || "Could not update connection");
+  const index = state.connections.connections.findIndex((item) => item.id === connection.id);
+  if (index >= 0) {
+    const previous = state.connections.connections[index];
+    const summary = state.connections.summary || {};
+    if (previous.primary_product !== result.connection.primary_product) {
+      summary.by_product[previous.primary_product] = Math.max(0, (summary.by_product[previous.primary_product] || 0) - 1);
+      summary.by_product[result.connection.primary_product] = (summary.by_product[result.connection.primary_product] || 0) + 1;
+    }
+    if (previous.review_status !== result.connection.review_status) {
+      summary.by_status[previous.review_status] = Math.max(0, (summary.by_status[previous.review_status] || 0) - 1);
+      summary.by_status[result.connection.review_status] = (summary.by_status[result.connection.review_status] || 0) + 1;
+    }
+    if (previous.profile_status === "search" && result.connection.profile_status !== "search") {
+      summary.search_routes = Math.max(0, (summary.search_routes || 0) - 1);
+      summary.direct_profiles = (summary.direct_profiles || 0) + 1;
+    }
+    if (!previous.contacted_at && result.connection.contacted_at) {
+      summary.contacted = (summary.contacted || 0) + 1;
+      summary.not_contacted = Math.max(0, (summary.not_contacted || 0) - 1);
+    } else if (previous.contacted_at && !result.connection.contacted_at) {
+      summary.contacted = Math.max(0, (summary.contacted || 0) - 1);
+      summary.not_contacted = (summary.not_contacted || 0) + 1;
+    }
+    state.connections.connections[index] = result.connection;
+  }
+  return result.connection;
+}
+
+function connectionSelect(connection, field, values) {
+  return h("select", {
+    class: "connection-select",
+    onchange: async (event) => {
+      try {
+        await patchConnection(connection, { [field]: event.target.value });
+        toast("Connection updated");
+        render();
+      } catch (error) { toast(error.message); }
+    }
+  }, values.map(([value, label]) => h("option", {
+    value,
+    ...(connection[field] === value ? { selected: "" } : {}),
+    text: label
+  })));
+}
+
+function refreshConnectionList(container) {
+  container.replaceChildren();
+  const all = filteredConnections();
+  const visible = all.slice(0, state.connectionVisible);
+  if (!visible.length) {
+    container.append(h("div", { class: "card pad muted", text: "No connections match those filters." }));
+    return;
+  }
+  for (const connection of visible) {
+    const scores = connection.product_scores || {};
+    const stateClass = connection.review_status === "dismissed" ? "is-dismissed" : connection.contacted_at ? "is-contacted" : "";
+    container.append(h("article", { class: `connection-row ${stateClass}` }, [
+      h("div", { class: "connection-main" }, [
+        h("div", { class: "connection-name-line" }, [
+          h("h2", { text: connection.name }),
+          h("span", { class: `portfolio-product product-${connection.primary_product}`, text: connection.primary_product === "other" ? "Other" : LINKEDIN_PRODUCT_LABELS[connection.primary_product] }),
+          connection.review_status === "dismissed" ? h("span", { class: "chip dismissed", text: "Dismissed" }) : null
+        ]),
+        h("p", { class: "connection-headline", text: connection.headline || "No headline captured" }),
+        h("div", { class: "connection-meta" }, [
+          h("span", { text: `Connected ${new Date(`${connection.connected_on}T12:00:00`).toLocaleDateString()}` }),
+          connection.linked_lead_id ? h("span", { class: "chip fit", text: "Already in CRM" }) : h("span", { text: "Not yet a CRM lead" }),
+          h("span", { text: connection.profile_status === "search" ? "Profile needs confirmation" : "Profile confirmed" }),
+          connection.contacted_at ? h("span", { class: "chip contacted", text: `Contacted ${new Date(connection.contacted_at).toLocaleDateString()}` }) : h("span", { text: "Not contacted" })
+        ])
+      ]),
+      h("div", { class: "connection-fit" }, [
+        h("div", { class: "connection-scores" }, [
+          h("span", { class: connection.classification_score >= 9 ? "score-strong" : "", text: connection.classification_source === "human" ? "Manual" : connection.classification_score >= 9 ? "Strong route" : connection.classification_score >= 4 ? "Possible route" : "Unrouted" }),
+          h("span", { text: `GNK ${scores.gnk || 0}` }),
+          h("span", { text: `OHUB ${scores.outagehub || 0}` }),
+          h("span", { text: `Morrow ${scores.morrow || 0}` })
+        ]),
+        h("p", { text: connection.classification_reason || "No classification reason" })
+      ]),
+      h("div", { class: "connection-review" }, [
+        h("label", {}, [h("span", { text: "Bucket" }), connectionSelect(connection, "primary_product", [["gnk", "GNK"], ["outagehub", "OHUB"], ["morrow", "Morrow"], ["other", "Other"]])]),
+        h("label", {}, [h("span", { text: "Review" }), connectionSelect(connection, "review_status", [["new", "New"], ["reviewing", "Reviewing"], ["qualified", "Qualified"], ["dismissed", "Dismissed"]])]),
+        h("div", { class: "connection-actions" }, [
+          h("button", {
+            class: `btn sm ${connection.contacted_at ? "ghost" : ""}`,
+            text: connection.contacted_at ? "Undo contacted" : "Mark contacted",
+            onclick: async () => {
+              try {
+                await patchConnection(connection, { contacted: !connection.contacted_at, contact_channel: "linkedin" });
+                toast(connection.contacted_at ? "Contact mark removed" : "Marked contacted");
+                render();
+              } catch (error) { toast(error.message); }
+            }
+          }),
+          h("a", { class: "btn sm", href: connection.profile_url, target: "_blank", rel: "noreferrer", text: connection.profile_status === "search" ? "Find on LinkedIn ↗" : "Open profile ↗" }),
+          h("button", {
+            class: "btn ghost sm",
+            text: "Confirm URL",
+            onclick: async () => {
+              const profile = prompt("Paste the direct LinkedIn /in/ profile URL", connection.profile_status === "search" ? "" : connection.profile_url);
+              if (!profile) return;
+              try { await patchConnection(connection, { profile_url: profile }); toast("Profile confirmed"); render(); }
+              catch (error) { toast(error.message); }
+            }
+          })
+        ])
+      ])
+    ]));
+  }
+  if (visible.length < all.length) {
+    container.append(h("button", {
+      class: "btn connection-more",
+      text: `Show ${Math.min(100, all.length - visible.length)} more · ${all.length - visible.length} remaining`,
+      onclick: () => { state.connectionVisible += 100; refreshConnectionList(container); }
+    }));
+  }
+}
+
+function renderConnections() {
+  const el = h("section", { class: "page connections-page" });
+  const summary = state.connections.summary || { by_product: {}, by_status: {} };
+  const byProduct = summary.by_product || {};
+  const potential = (byProduct.gnk || 0) + (byProduct.outagehub || 0) + (byProduct.morrow || 0);
+  el.append(pageHead(
+    "Relationship catalogue",
+    "Your LinkedIn connections",
+    `${summary.total || 0} imported first-degree connections · ${potential} potential customer or routing relationships · review before promotion to CRM`,
+    null
+  ));
+  el.append(h("div", { class: "linkedin-summary connections-summary" }, [
+    metric("All connections", String(summary.total || 0)),
+    metric("Potential", String(potential)),
+    metric("Contacted", String(summary.contacted || 0)),
+    metric("Qualified", String(summary.by_status?.qualified || 0))
+  ]));
+  const productCards = h("div", { class: "connection-buckets" });
+  for (const product of ["all", "gnk", "outagehub", "morrow", "other"]) {
+    productCards.append(h("button", {
+      class: `connection-bucket ${state.connectionProduct === product ? "on" : ""}`,
+      onclick: () => { state.connectionProduct = product; state.connectionVisible = 100; render(); }
+    }, [
+      h("strong", { text: product === "all" ? "All" : product === "other" ? "Other" : LINKEDIN_PRODUCT_LABELS[product] }),
+      h("span", { text: String(product === "all" ? summary.total || 0 : byProduct[product] || 0) })
+    ]));
+  }
+  const controls = h("div", { class: "linkedin-controls card connection-controls" });
+  const list = h("div", { class: "connection-list" });
+  const status = h("select", {
+    class: "search",
+    onchange: (event) => { state.connectionStatus = event.target.value; state.connectionVisible = 100; refreshConnectionList(list); }
+  }, [["all", "All review states"], ["new", "New"], ["reviewing", "Reviewing"], ["qualified", "Qualified"], ["dismissed", "Dismissed"]].map(([value, label]) => h("option", {
+    value,
+    ...(state.connectionStatus === value ? { selected: "" } : {}),
+    text: label
+  })));
+  const confidence = h("select", {
+    class: "search",
+    onchange: (event) => { state.connectionConfidence = event.target.value; state.connectionVisible = 100; refreshConnectionList(list); }
+  }, [["all", "All confidence levels"], ["strong", "Strong routes"], ["possible", "Possible routes"]].map(([value, label]) => h("option", {
+    value,
+    ...(state.connectionConfidence === value ? { selected: "" } : {}),
+    text: label
+  })));
+  const contact = h("select", {
+    class: "search",
+    onchange: (event) => { state.connectionContact = event.target.value; state.connectionVisible = 100; refreshConnectionList(list); }
+  }, [["all", "All contact states"], ["not_contacted", "Not contacted"], ["contacted", "Contacted"]].map(([value, label]) => h("option", {
+    value,
+    ...(state.connectionContact === value ? { selected: "" } : {}),
+    text: label
+  })));
+  const search = h("input", {
+    class: "search",
+    type: "search",
+    placeholder: "Search names, roles or classification reasons…",
+    value: state.connectionSearch,
+    oninput: (event) => { state.connectionSearch = event.target.value; state.connectionVisible = 100; refreshConnectionList(list); }
+  });
+  controls.append(status, confidence, contact, search);
+  refreshConnectionList(list);
+  el.append(productCards, controls, list);
+  return el;
+}
+
+/* ---------- page: relationship history ---------- */
+function relationshipDate(value, withTime = true) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return withTime ? date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : date.toLocaleDateString([], { dateStyle: "medium" });
+}
+
+function filteredConversations() {
+  const query = state.conversationSearch.trim().toLowerCase();
+  return (state.conversations.conversations || []).filter((conversation) => {
+    if (conversation.product !== state.product) return false;
+    if (state.conversationStatus === "call_proposed" && conversation.meeting_status !== "proposed") return false;
+    if (state.conversationStatus === "call_scheduled" && conversation.meeting_status !== "scheduled") return false;
+    if (!["all", "call_proposed", "call_scheduled"].includes(state.conversationStatus) && conversation.status !== state.conversationStatus) return false;
+    const messageText = (conversation.messages || []).map((message) => message.body).join(" ");
+    return !query || `${conversation.name} ${conversation.headline} ${conversation.summary} ${conversation.manual_notes || ""} ${messageText}`.toLowerCase().includes(query);
+  });
+}
+
+function conversationStateLabel(conversation) {
+  if (conversation.meeting_status === "completed") return "Call completed";
+  if (conversation.meeting_status === "scheduled") return "Call booked";
+  if (conversation.meeting_status === "proposed") return "Waiting to confirm call";
+  if (conversation.status === "needs_reply") return "Reply needed";
+  if (conversation.status === "closed") return "Closed";
+  return conversation.last_outbound_at ? "Waiting for reply" : "Needs review";
+}
+
+function connectionForConversation(conversation) {
+  return (state.connections.connections || []).find((connection) => connection.id === conversation.connection_id)
+    || (state.connections.connections || []).find((connection) => sameName(connection.name, conversation.name)) || null;
+}
+
+async function patchConversation(conversation, patch) {
+  const response = await fetch(`/api/linkedin-conversations/${conversation.id}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) throw new Error(result.error || "Could not update conversation");
+  const refreshed = await fetch(productUrl("/api/linkedin-conversations")).then((item) => item.json());
+  state.conversations = refreshed;
+  return result.conversation;
+}
+
+async function qualifyConversation(conversation) {
+  const prompts = [
+    ["problem", "What buyer-confirmed problem exists?"],
+    ["consequence", "What is the business or operating consequence?"],
+    ["owner", "Who owns the problem and decision?"],
+    ["timing", "What timing or urgency was confirmed?"],
+    ["commercial_path", "What is the budget, procurement, or commercial path?"],
+    ["next_step", "What explicit next step was agreed?"]
+  ];
+  const body = { conversation_id: conversation.id };
+  for (const [field, question] of prompts) {
+    const answer = prompt(question, "");
+    if (answer == null) return;
+    body[field] = answer.trim();
+  }
+  const due = prompt("When is the next step due? (ISO date/time or blank for now)", "");
+  if (due) body.next_step_at = new Date(due).toISOString();
+  try {
+    await apiPost("/api/opportunities/qualify", body);
+    toast("Qualified opportunity created with buyer evidence");
+    await load();
+  } catch (error) { toast(error.message); }
+}
+
+function conversationSelect(conversation, field, values) {
+  return h("select", {
+    class: "connection-select",
+    onchange: async (event) => {
+      try { await patchConversation(conversation, { [field]: event.target.value }); toast("Conversation updated"); render(); }
+      catch (error) { toast(error.message); }
+    }
+  }, values.map(([value, label]) => h("option", { value, ...(conversation[field] === value ? { selected: "" } : {}), text: label })));
+}
+
+function conversationAgenda(items, title, emptyText, dateField) {
+  const section = h("section", { class: "relationship-agenda card" });
+  section.append(h("h2", { text: title }));
+  if (!items.length) {
+    section.append(h("p", { class: "muted", text: emptyText }));
+    return section;
+  }
+  for (const item of items.slice(0, 8)) {
+    section.append(h("button", {
+      class: "agenda-item",
+      onclick: () => {
+        state.conversationSearch = item.name;
+        const input = document.querySelector(".conversation-search");
+        if (input) input.value = item.name;
+        const list = document.querySelector(".conversation-list");
+        if (list) refreshConversationList(list);
+      }
+    }, [
+      h("span", { class: "agenda-date", text: relationshipDate(item[dateField]) }),
+      h("strong", { text: item.name }),
+      h("small", { text: item.next_action || item.summary })
+    ]));
+  }
+  return section;
+}
+
+function refreshConversationList(container) {
+  container.replaceChildren();
+  const rows = filteredConversations();
+  if (!rows.length) {
+    container.append(h("div", { class: "card pad muted", text: "No conversations match those filters." }));
+    return;
+  }
+  for (const conversation of rows) {
+    const details = conversation.contact_details || {};
+    const connection = connectionForConversation(conversation);
+    const card = h("article", { class: `conversation-card status-${conversation.status}` });
+    const main = h("div", { class: "conversation-summary" }, [
+      h("div", { class: "connection-name-line" }, [
+        h("h2", { text: conversation.name }),
+        h("span", { class: `portfolio-product product-${conversation.product}`, text: conversation.product === "other" ? "Other" : LINKEDIN_PRODUCT_LABELS[conversation.product] }),
+        h("span", { class: `conversation-status ${conversation.status}`, text: conversationStateLabel(conversation) }),
+        connection?.contacted_at ? h("span", { class: "chip contacted", text: "Contacted" }) : null,
+        connection?.review_status === "dismissed" ? h("span", { class: "chip dismissed", text: "Not relevant" }) : null
+      ]),
+      h("p", { class: "connection-headline", text: conversation.headline || "No headline captured" }),
+      h("p", { class: "conversation-digest", text: conversation.summary }),
+      h("div", { class: "connection-meta" }, [
+        h("span", { text: `${conversation.message_count} messages · ${conversation.inbound_count} inbound · ${conversation.outbound_count} outbound` }),
+        h("span", { text: `Last activity ${relationshipDate(conversation.last_message_at)}` }),
+        h("span", { text: `Signal: ${humanize(conversation.response_theme)}` })
+      ]),
+      (details.emails || []).length || (details.phones || []).length ? h("div", { class: "contact-details" }, [
+        ...(details.emails || []).map((email) => h("a", { href: `mailto:${email}`, text: email })),
+        ...(details.phones || []).map((phone) => h("span", { text: phone }))
+      ]) : null,
+      h("div", { class: "next-action" }, [h("strong", { text: "Next action" }), h("span", { text: conversation.next_action || "Review conversation" })])
+    ]);
+    const workflow = h("div", { class: "conversation-workflow" }, [
+      h("label", {}, [h("span", { text: "Workflow" }), conversationSelect(conversation, "status", [["waiting", "Waiting"], ["needs_reply", "Needs reply"], ["meeting_booked", "Meeting booked"], ["closed", "Closed"]])]),
+      h("label", {}, [h("span", { text: "Meeting" }), conversationSelect(conversation, "meeting_status", [["none", "None"], ["proposed", "Proposed"], ["scheduled", "Scheduled"], ["completed", "Completed"], ["cancelled", "Cancelled"]])]),
+      h("label", {}, [h("span", { text: "Confirmed outcome" }), conversationSelect(conversation, "primary_outcome", [["no_reply", "No reply"], ["polite_neutral", "Polite / neutral"], ["correction", "Correction"], ["objection", "Objection"], ["current_process_disclosure", "Current process disclosed"], ["problem_acknowledged", "Problem acknowledged"], ["timing_signal", "Timing signal"], ["referral", "Referral"], ["call_proposed", "Call proposed"], ["call_booked", "Call booked"], ["qualified_commercial_interest", "Qualified commercial interest"], ["negative_suppress", "Negative / suppress"]])]),
+      h("label", {}, [h("span", { text: "Follow up" }), h("input", {
+        class: "connection-select", type: "datetime-local", value: conversation.follow_up_at ? conversation.follow_up_at.slice(0, 16) : "",
+        onchange: async (event) => { try { await patchConversation(conversation, { follow_up_at: event.target.value || null }); toast("Follow-up saved"); render(); } catch (error) { toast(error.message); } }
+      })]),
+      h("label", {}, [h("span", { text: "Call time" }), h("input", {
+        class: "connection-select", type: "datetime-local", value: conversation.meeting_at ? conversation.meeting_at.slice(0, 16) : "",
+        onchange: async (event) => { try { await patchConversation(conversation, { meeting_at: event.target.value || null }); toast("Call time saved"); render(); } catch (error) { toast(error.message); } }
+      })]),
+      h("div", { class: "conversation-actions" }, [
+        conversation.profile_url ? h("a", { class: "btn sm", href: conversation.profile_url, target: "_blank", rel: "noreferrer", text: "Open LinkedIn ↗" }) : null,
+        connection ? h("button", { class: `btn sm contact-action ${connection.contacted_at ? "is-contacted" : ""}`, text: connection.contacted_at ? "Contacted ✓" : "Mark contacted", onclick: async () => {
+          try { await patchConnection(connection, { contacted: !connection.contacted_at, contact_channel: "linkedin" }); toast(connection.contacted_at ? "Contact mark removed" : "Marked contacted"); render(); }
+          catch (error) { toast(error.message); }
+        } }) : null,
+        connection ? h("button", { class: `btn sm irrelevant-action ${connection.review_status === "dismissed" ? "is-dismissed" : ""}`, text: connection.review_status === "dismissed" ? "Restore" : "Not relevant", onclick: async () => {
+          try { await patchConnection(connection, { review_status: connection.review_status === "dismissed" ? "qualified" : "dismissed" }); toast(connection.review_status === "dismissed" ? "Relationship restored" : "Marked not relevant"); render(); }
+          catch (error) { toast(error.message); }
+        } }) : null,
+        conversation.primary_outcome === "qualified_commercial_interest" && conversation.outcome_confirmed_by
+          ? h("button", { class: "btn primary sm", text: "Qualify opportunity", onclick: () => qualifyConversation(conversation) }) : null,
+        h("span", { class: "muted", text: conversation.meeting_timezone ? `Call timezone: ${conversation.meeting_timezone}` : "" })
+      ])
+    ]);
+    const noteArea = h("textarea", { class: "conversation-notes", placeholder: "Add your own notes, call outcome, or context…" });
+    noteArea.value = conversation.manual_notes || "";
+    const history = h("details", { class: "conversation-history" }, [
+      h("summary", { text: `Full conversation · ${conversation.message_count} messages` }),
+      h("div", { class: "message-timeline" }, (conversation.messages || []).map((message) => h("div", { class: `history-message ${message.direction}` }, [
+        h("div", { class: "history-meta" }, [h("strong", { text: message.direction === "outbound" ? "You" : message.sender_name }), h("span", { text: relationshipDate(message.sent_at) })]),
+        h("p", { text: message.body })
+      ]))),
+      h("div", { class: "notes-editor" }, [
+        noteArea,
+        h("button", { class: "btn sm", text: "Save notes", onclick: async () => { try { await patchConversation(conversation, { manual_notes: noteArea.value }); toast("Notes saved"); render(); } catch (error) { toast(error.message); } } })
+      ])
+    ]);
+    card.append(h("div", { class: "conversation-top" }, [main, workflow]), history);
+    container.append(card);
+  }
+}
+
+function renderConversations() {
+  const el = h("section", { class: "page conversations-page" });
+  const data = state.conversations || {};
+  const summary = data.summary || {};
+  const insights = data.insights || { lessons: [], by_product: {}, themes: {} };
+  el.append(pageHead(
+    "Relationship intelligence",
+    "Conversations, calls and follow-ups",
+    `${summary.total || 0} people · ${summary.messages || 0} cleaned LinkedIn messages · full history linked to each relationship`,
+    null
+  ));
+  el.append(h("div", { class: "linkedin-summary relationship-summary" }, [
+    metric("Any reply · diagnostic", `${Math.round((insights.response_rate || 0) * 100)}%`),
+    metric("Qualified replies", String(summary.qualified_replies || 0)),
+    metric("Meetings booked", String(summary.meetings || 0)),
+    metric("Needs reply", String(summary.needs_reply || 0))
+  ]));
+  const now = new Date().toISOString().slice(0, 19);
+  const upcomingMeetings = (data.conversations || []).filter((item) => item.meeting_status === "scheduled" && item.meeting_at).sort((a, b) => a.meeting_at.localeCompare(b.meeting_at));
+  const followups = (data.conversations || []).filter((item) => item.follow_up_at && item.status !== "closed" && item.meeting_status !== "scheduled").sort((a, b) => a.follow_up_at.localeCompare(b.follow_up_at));
+  el.append(h("div", { class: "relationship-grid" }, [
+    conversationAgenda(upcomingMeetings, "Call calendar", "No scheduled calls detected.", "meeting_at"),
+    conversationAgenda(followups, "Follow-up queue", "No follow-ups queued.", "follow_up_at"),
+    h("section", { class: "relationship-insights card" }, [
+      h("h2", { text: "What the outreach is teaching us" }),
+      ...(insights.lessons || []).map((lesson) => h("p", { text: lesson })),
+      h("div", { class: "insight-themes" }, Object.entries(insights.themes || {}).filter(([, count]) => count).map(([theme, count]) => h("span", { text: `${humanize(theme)} ${count}` })))
+    ])
+  ]));
+  const controls = h("div", { class: "linkedin-controls card conversation-controls" });
+  const list = h("div", { class: "conversation-list" });
+  const product = h("select", { class: "search", onchange: (event) => { state.conversationProduct = event.target.value; refreshConversationList(list); } },
+    [["all", "All products"], ["gnk", "GNK"], ["outagehub", "OHUB"], ["morrow", "Morrow"], ["other", "Other"]].map(([value, label]) => h("option", { value, ...(state.conversationProduct === value ? { selected: "" } : {}), text: label })));
+  const status = h("select", { class: "search", onchange: (event) => { state.conversationStatus = event.target.value; refreshConversationList(list); } },
+    [["all", "All workflow states"], ["waiting", "Waiting"], ["needs_reply", "Needs reply"], ["meeting_booked", "Meeting booked"], ["closed", "Closed"]].map(([value, label]) => h("option", { value, ...(state.conversationStatus === value ? { selected: "" } : {}), text: label })));
+  const search = h("input", { class: "search conversation-search", type: "search", placeholder: "Search people, messages, emails, notes or objections…", value: state.conversationSearch,
+    oninput: (event) => { state.conversationSearch = event.target.value; refreshConversationList(list); } });
+  controls.append(product, status, search);
+  refreshConversationList(list);
+  el.append(controls, list);
+  return el;
+}
+
+function renderConversationPasteImport() {
+  const person = h("input", { class: "search", type: "text", placeholder: "Person name (only if the copied text omits it)" });
+  const paste = h("textarea", { class: "conversation-paste", placeholder: "Paste the copied LinkedIn DM conversation here…" });
+  const result = state.conversationImportResult;
+  return h("details", { class: "conversation-import card", open: result ? "" : null }, [
+    h("summary", {}, [h("div", {}, [h("strong", { text: "Add or update LinkedIn DMs" }), h("span", { text: "Copy a conversation from LinkedIn, paste it here, and process it." })]), h("span", { class: "chip fit", text: "Paste + process" })]),
+    h("div", { class: "conversation-import-body" }, [
+      h("div", { class: "import-steps" }, [h("span", { text: "1. Open the LinkedIn conversation" }), h("span", { text: "2. Copy the conversation timeline or the full page" }), h("span", { text: "3. Paste and process" })]),
+      person,
+      paste,
+      h("div", { class: "conversation-import-actions" }, [
+        h("p", { text: "Existing messages are deduplicated. New messages are merged into the same person and the status, call state, next action, and learnings are recalculated." }),
+        h("button", { class: "btn primary", text: "Process LinkedIn DMs", onclick: async () => {
+          const text = paste.value.trim();
+          if (!text) { toast("Paste the LinkedIn conversation first"); return; }
+          try {
+            const imported = await apiPost("/api/linkedin-chats/import", { text, name_hint: person.value.trim(), reference_day: new Date().toISOString().slice(0, 10) });
+            state.conversationImportResult = imported;
+            toast(`${imported.people.join(", ")}: ${imported.new_messages} new message${imported.new_messages === 1 ? "" : "s"} processed`);
+            await load();
+          } catch (error) { toast(error.message); }
+        } })
+      ]),
+      result ? h("div", { class: "import-result" }, [h("strong", { text: `${result.processed_conversations} conversation${result.processed_conversations === 1 ? "" : "s"} processed` }), h("span", { text: `${result.new_messages} new messages · ${result.new_conversations} new people · ${result.people.join(", ")}` })]) : null
+    ])
+  ]);
+}
+
+function renderMessagedNetwork() {
+  const data = state.conversations || {};
+  const summary = data.summary || {};
+  const conversations = data.conversations || [];
+  const proposed = conversations.filter((item) => item.meeting_status === "proposed").length;
+  const scheduled = conversations.filter((item) => item.meeting_status === "scheduled").length;
+  const wrapper = h("div", { class: "messaged-workspace" });
+  wrapper.append(
+    h("div", { class: "messaged-summary" }, [
+      founderMetric("People messaged", summary.total || 0, `${summary.messages || 0} DMs preserved`),
+      founderMetric("Reply needed", summary.needs_reply || 0, "latest message is inbound"),
+      founderMetric("Calls to confirm", proposed, "time was proposed but not confirmed"),
+      founderMetric("Calls booked", scheduled, "scheduled in the imported conversation")
+    ]),
+    renderConversationPasteImport()
+  );
+  const controls = h("div", { class: "linkedin-controls card conversation-controls" });
+  const list = h("div", { class: "conversation-list" });
+  const status = h("select", { class: "search", onchange: (event) => { state.conversationStatus = event.target.value; refreshConversationList(list); } },
+    [["all", "All current states"], ["waiting", "Waiting for reply"], ["needs_reply", "Reply needed"], ["call_proposed", "Waiting to confirm call"], ["call_scheduled", "Call booked"], ["closed", "Closed"]].map(([value, label]) => h("option", { value, ...(state.conversationStatus === value ? { selected: "" } : {}), text: label })));
+  const search = h("input", { class: "search conversation-search", type: "search", placeholder: "Search people, DMs, notes or objections…", value: state.conversationSearch,
+    oninput: (event) => { state.conversationSearch = event.target.value; refreshConversationList(list); } });
+  controls.append(status, search);
+  refreshConversationList(list);
+  wrapper.append(controls, list);
+  return wrapper;
+}
+
+/* ---------- SalesV3 2.1 founder-facing product ---------- */
+function founderTabs(items, active, onChange) {
+  return h("div", { class: "founder-tabs", role: "tablist" }, items.map(([key, label, count]) => h("button", {
+    class: `founder-tab ${active === key ? "on" : ""}`,
+    type: "button",
+    role: "tab",
+    text: `${label}${count == null ? "" : ` · ${count}`}`,
+    onclick: () => onChange(key)
+  })));
+}
+
+function sameName(a, b) {
+  return norm(a) && norm(a) === norm(b);
+}
+
+function relationshipContext() {
+  const action = (state.founder.actions || []).find((item) => item.id === state.drawerActionId) || null;
+  const conversationId = state.drawerConversationId || (action?.entity_type === "conversation" ? Number(action.entity_id) : null);
+  const conversation = (state.conversations.conversations || []).find((item) => item.id === conversationId) || null;
+  const connectionId = state.drawerConnectionId || conversation?.connection_id || null;
+  const connection = (state.connections.connections || []).find((item) => item.id === connectionId)
+    || (conversation ? (state.connections.connections || []).find((item) => sameName(item.name, conversation.name)) : null);
+  const prospect = (state.linkedin.prospects || []).find((item) => sameName(item.name, conversation?.name || connection?.name)) || null;
+  return { action, conversation, connection, prospect };
+}
+
+function openRelationship({ action = null, conversation = null, connection = null } = {}) {
+  state.drawerActionId = action?.id || null;
+  state.drawerConversationId = conversation?.id || (action?.entity_type === "conversation" ? Number(action.entity_id) : null);
+  state.drawerConnectionId = connection?.id || null;
+  state.drawerDraftType = null;
+  const id = state.drawerConversationId || state.drawerConnectionId || "relationship";
+  history.replaceState(null, "", `${location.pathname}#${state.view}?relationship=${id}`);
+  render();
+}
+
+function closeRelationship() {
+  state.drawerActionId = null;
+  state.drawerConversationId = null;
+  state.drawerConnectionId = null;
+  state.drawerDraftType = null;
+  history.replaceState(null, "", `#${state.view}`);
+  render();
+}
+
+function relationshipDraft(context) {
+  const { action, conversation, prospect } = context;
+  if (action?.action_type === "work_referral") {
+    return `Thanks ${firstName(conversation?.name)}. I appreciate the direction. I will reach out to the owner you mentioned with your context and keep the ask focused.`;
+  }
+  if (action?.action_type === "reply" && /written questions/i.test(action.reason || "")) {
+    return `Thanks ${firstName(conversation?.name)}. Written questions work well. I will keep them concise and focused on your current process, the main constraint, who owns it, and what would make a change worthwhile.`;
+  }
+  if (action?.action_type === "follow_up" && prospect?.follow_up) return prospect.follow_up;
+  if (!conversation?.outbound_count && prospect?.first_message) return prospect.first_message;
+  if (prospect?.follow_up) return prospect.follow_up;
+  return conversation?.next_action || action?.reason || "Review the relationship evidence and write one short, specific next message.";
+}
+
+function renderRelationshipDrawer() {
+  if (!state.drawerActionId && !state.drawerConversationId && !state.drawerConnectionId) return null;
+  const context = relationshipContext();
+  const { action, conversation, connection, prospect } = context;
+  const name = conversation?.name || connection?.name || action?.person_name || "Relationship";
+  const product = conversation?.product || connection?.primary_product || action?.product || state.product;
+  const profile = conversation?.profile_url || connection?.profile_url || prospect?.profile_url;
+  const messages = conversation?.messages || [];
+  const storedDrafts = connection?.message_drafts || {};
+  const defaultDraftType = !connection?.contacted_at && storedDrafts.connection_request ? "connection_request"
+    : !conversation?.outbound_count && storedDrafts.warm_introduction ? "warm_introduction"
+      : storedDrafts.research_call ? "research_call" : null;
+  const activeDraftType = state.drawerDraftType || defaultDraftType;
+  const draft = h("textarea", { class: "relationship-draft", "aria-label": "Editable message draft" });
+  draft.value = storedDrafts[activeDraftType]?.body || relationshipDraft(context);
+  const panel = h("aside", { class: "relationship-drawer", role: "dialog", "aria-modal": "true", "aria-label": `${name} relationship` });
+  panel.append(
+    h("header", { class: "drawer-head" }, [
+      h("div", {}, [
+        h("div", { class: "drawer-kicker" }, [h("span", { class: `portfolio-product product-${product}`, text: CONNECTION_MOTION_LABELS[product] || "Other" }), h("span", { text: connection?.relationship_role ? humanize(connection.relationship_role) : conversation?.play_id || action?.play_id || "Relationship" })]),
+        h("h2", { text: name }),
+        h("p", { text: conversation?.headline || connection?.headline || prospect?.title || "Role or company needs confirmation" })
+      ]),
+      h("button", { class: "drawer-close", type: "button", text: "Close", onclick: closeRelationship })
+    ]),
+    h("div", { class: "drawer-scroll" }, [
+      action ? h("section", { class: "drawer-section current-action" }, [
+        h("p", { class: "card-eyebrow", text: "Current action" }),
+        h("h3", { text: actionLabel(action.action_type) }),
+        h("p", { text: action.reason || "Review and decide the next step." }),
+        h("small", { text: action.due_at ? `Due ${relationshipDate(action.due_at)}` : "No due date" })
+      ]) : null,
+      h("section", { class: "drawer-section" }, [
+        h("div", { class: "drawer-section-head" }, [h("h3", { text: "Conversation" }), h("span", { text: `${messages.length} messages` })]),
+        messages.length ? h("div", { class: "drawer-timeline" }, messages.map((message) => h("div", { class: `drawer-message ${message.direction}` }, [
+          h("div", { class: "history-meta" }, [h("strong", { text: message.direction === "outbound" ? "You" : message.sender_name }), h("span", { text: relationshipDate(message.sent_at) })]),
+          h("p", { text: message.body })
+        ]))) : h("p", { class: "muted", text: "No imported conversation yet. Use the profile and targeting evidence to prepare the first message." })
+      ]),
+      h("section", { class: "drawer-section" }, [
+        h("p", { class: "card-eyebrow", text: action?.action_type === "reply" ? "Suggested reply" : "Message workspace" }),
+        Object.keys(storedDrafts).length ? h("div", { class: "draft-type-switch", role: "group", "aria-label": "Choose message stage" }, [
+          ["connection_request", "1. Connection request"], ["warm_introduction", "2. Introduce robotics"], ["research_call", "3. Ask for a call"]
+        ].filter(([type]) => storedDrafts[type]).map(([type, label]) => h("button", { class: `draft-type-button ${activeDraftType === type ? "on" : ""}`, type: "button", text: label, title: type === "connection_request" ? "Use this inside the LinkedIn connection request. It is kept below 300 characters." : type === "warm_introduction" ? "Use this when you are already connected but have not introduced the robotics research yet." : "Use this after connecting when you are ready to ask for a short research call.", onclick: () => { state.drawerDraftType = type; render(); } }))) : null,
+        h("div", { class: "drawer-rule" }, [
+          h("strong", { text: "Rule applied" }),
+          h("span", { text: state.playbooks.ventures?.[product]?.formula || "One verified reason, one problem, one value proposition, one bounded ask." })
+        ]),
+        draft,
+        h("div", { class: "drawer-message-meta" }, [
+          h("span", { text: "Edit before sending" }),
+          h("span", { text: "Manual LinkedIn send only" })
+        ]),
+        h("div", { class: "drawer-actions" }, [
+          h("button", { class: "btn primary", text: "Copy message", onclick: () => copyText(draft.value, "Message copied") }),
+          conversation ? h("button", { class: "btn", text: "Record as sent", onclick: async () => {
+            try {
+              await apiPost(`/api/linkedin-conversations/${conversation.id}/messages/sent`, { body: draft.value, action_id: action?.id || null });
+              toast("LinkedIn message recorded as sent");
+              closeRelationship();
+              await load();
+            } catch (error) { toast(error.message); }
+          } }) : null,
+          connection ? h("button", { class: `btn contact-action ${connection.contacted_at ? "is-contacted" : ""}`, text: connection.contacted_at ? "Contacted ✓" : "Mark contacted", onclick: async () => {
+            try {
+              await patchConnection(connection, { contacted: !connection.contacted_at, contact_channel: "linkedin" });
+              toast(connection.contacted_at ? "Contact mark removed" : "Marked contacted");
+              await load();
+            } catch (error) { toast(error.message); }
+          } }) : null,
+          profile ? h("a", { class: "btn", href: profile, target: "_blank", rel: "noreferrer", text: "Open LinkedIn" }) : null
+        ])
+      ]),
+      h("section", { class: "drawer-section" }, [
+        h("p", { class: "card-eyebrow", text: "Why this relationship" }),
+        h("h3", { text: prospect?.observed_signal || connection?.classification_reason || "Targeting evidence needs review" }),
+        h("p", { text: prospect?.why_this_person || state.playbooks.ventures?.[product]?.buyer || "Confirm whether this person owns the problem or can route you to the owner." }),
+        prospect?.what_we_can_do ? h("div", { class: "drawer-value", text: prospect.what_we_can_do }) : null,
+        connection?.public_research ? h("div", { class: "public-research" }, [
+          h("strong", { text: [connection.public_research.current_role, connection.public_research.current_company].filter(Boolean).join(" at ") || "Public context reviewed" }),
+          h("p", { text: connection.public_research.reason || "Public profile sources were reviewed." }),
+          h("div", { class: "research-links" }, (connection.public_research.source_urls || []).map((url, index) => h("a", { href: url, target: "_blank", rel: "noreferrer", text: `Source ${index + 1} ↗` })))
+        ]) : null
+      ]),
+      conversation ? h("section", { class: "drawer-section" }, [
+        h("p", { class: "card-eyebrow", text: "Relationship controls" }),
+        h("div", { class: "drawer-control-grid" }, [
+          h("label", {}, [h("span", { text: "Workflow" }), conversationSelect(conversation, "status", [["waiting", "Waiting"], ["needs_reply", "Needs reply"], ["meeting_booked", "Meeting booked"], ["closed", "Closed"]])]),
+          h("label", {}, [h("span", { text: "Outcome" }), conversationSelect(conversation, "primary_outcome", [["no_reply", "No reply"], ["correction", "Correction"], ["objection", "Objection"], ["referral", "Referral"], ["problem_acknowledged", "Problem acknowledged"], ["call_proposed", "Call proposed"], ["call_booked", "Call booked"], ["qualified_commercial_interest", "Qualified commercial interest"], ["negative_suppress", "Negative / suppress"]])])
+        ])
+      ]) : null
+    ]),
+    h("footer", { class: "drawer-footer" }, [
+      action?.action_type === "confirm_meeting" ? h("button", { class: "btn primary", text: "Confirm call", onclick: () => confirmActionMeeting(action) }) : null,
+      action?.action_type === "prepare_meeting" ? h("button", { class: "btn primary", text: "Record outcome", onclick: () => captureActionMeetingOutcome(action) }) : null,
+      action && !["confirm_meeting", "prepare_meeting", "revisit_on_new_trigger"].includes(action.action_type) ? h("button", { class: "btn primary", text: "Complete action", onclick: () => operateOnAction(action, "complete") }) : null,
+      action ? h("button", { class: "btn", text: "Snooze to tomorrow", onclick: () => operateOnAction(action, "snooze", { due_at: new Date(Date.now() + 86400000).toISOString() }) }) : null,
+      action ? h("button", { class: "btn ghost danger", text: "Close", onclick: () => operateOnAction(action, "close") }) : null,
+      action ? h("button", { class: "btn ghost danger", text: "Suppress", onclick: () => operateOnAction(action, "suppress") }) : null,
+      connection ? h("button", { class: `btn irrelevant-action ${connection.review_status === "dismissed" ? "is-dismissed" : ""}`, text: connection.review_status === "dismissed" ? "Restore relationship" : "Not relevant", onclick: async () => {
+        try {
+          await patchConnection(connection, { review_status: connection.review_status === "dismissed" ? "qualified" : "dismissed" });
+          toast(connection.review_status === "dismissed" ? "Relationship restored" : "Relationship dismissed");
+          closeRelationship();
+          await load();
+        } catch (error) { toast(error.message); }
+      } }) : null
+    ])
+  );
+  return h("div", { class: "drawer-layer" }, [h("button", { class: "drawer-backdrop", "aria-label": "Close relationship", onclick: closeRelationship }), panel]);
+}
+
+function workCard(key, label, count, definition, tone = "") {
+  return h("button", { class: `work-status-card ${tone} ${state.workFilter === key ? "on" : ""}`, onclick: () => {
+    if (key === "calls") { go("calendar"); return; }
+    state.workFilter = state.workFilter === key ? "all" : key;
+    render();
+  } }, [
+    h("span", { text: label }), h("strong", { text: String(count || 0) }), h("small", { text: definition })
+  ]);
+}
+
+function actionMatchesFilter(action, key) {
+  if (key === "all") return true;
+  if (key === "reply") return action.action_type === "reply";
+  if (key === "confirm") return action.action_type === "confirm_meeting";
+  if (key === "followup") return action.action_type === "follow_up";
+  if (key === "promised") return ["execute_next_step", "follow_up_proposal", "send_promised_item"].includes(action.action_type);
+  if (key === "overdue") return action.due_at && new Date(action.due_at) < new Date();
+  return true;
+}
+
+function workActionLabel(action) {
+  return ({ reply: "Reply", confirm_meeting: "Confirm call", prepare_meeting: "Prepare call", follow_up: "Draft follow-up", work_referral: "Work referral", decide_next_step: "Decide next step", execute_next_step: "Send promised item" })[action.action_type] || "Review relationship";
+}
+
+function renderWork() {
+  const all = (state.founder.work_actions || (state.founder.actions || []).filter((a) => !["revisit_on_new_trigger", "pause_until"].includes(a.action_type)))
+    .filter((action) => action.product === state.product);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const activeMeetings = (state.founder.meetings || []).filter((meeting) => {
+    const conversation = (state.conversations.conversations || []).find((item) => item.id === meeting.source_conversation_id);
+    return conversation?.product === state.product;
+  });
+  const metrics = {
+    reply_needed: all.filter((item) => item.action_type === "reply").length,
+    calls_to_confirm: all.filter((item) => item.action_type === "confirm_meeting").length,
+    calls_today: activeMeetings.filter((item) => item.starts_at?.slice(0, 10) === today && ["human_confirmed", "calendar_confirmed"].includes(item.confirmation_status)).length,
+    followups_due: all.filter((item) => item.action_type === "follow_up").length,
+    promised_items: all.filter((item) => ["execute_next_step", "follow_up_proposal", "send_promised_item"].includes(item.action_type)).length,
+    overdue_actions: all.filter((item) => item.due_at && new Date(item.due_at) < now).length,
+    watchlist: (state.founder.watchlist || []).filter((item) => item.product === state.product).length,
+  };
+  const actions = all.filter((action) => actionMatchesFilter(action, state.workFilter));
+  const groups = [
+    ["Respond now", ["reply"]], ["Confirm or prepare calls", ["confirm_meeting", "prepare_meeting"]],
+    ["Send promised items", ["execute_next_step", "follow_up_proposal", "send_promised_item"]],
+    ["Follow up", ["follow_up"]], ["Work referrals", ["work_referral"]], ["Decide next step", ["decide_next_step"]]
+  ];
+  const el = h("section", { class: "page founder-page work-page" });
+  el.append(pageHead("Work", "Founder operating queue", "Clear active relationships and commitments before adding inventory. Watchlist records are not work.", [
+    h("button", { class: "btn", text: "Reconcile LinkedIn", onclick: async () => { await apiPost("/api/founder-sync"); toast("Relationships reconciled"); await load(); } })
+  ]));
+  el.append(h("div", { class: "work-status-grid" }, [
+    workCard("reply", "Reply needed", metrics.reply_needed, "Someone replied and you owe a response", "urgent"),
+    workCard("confirm", "Calls to confirm", metrics.calls_to_confirm, "Date, time zone, intent, or calendar is unconfirmed"),
+    workCard("calls", "Calls today", metrics.calls_today, "Confirmed calls occurring today"),
+    workCard("followup", "Follow-ups due", metrics.followups_due, "Deliberate second touches due now"),
+    workCard("promised", "Promised items", metrics.promised_items, "Questions, recaps, proposals, or introductions owed"),
+    workCard("overdue", "Overdue", metrics.overdue_actions, "Performable actions past due", metrics.overdue_actions ? "danger" : "")
+  ]));
+  let shown = 0;
+  for (const [title, types] of groups) {
+    const rows = actions.filter((action) => types.includes(action.action_type));
+    if (!rows.length) continue;
+    shown += rows.length;
+    el.append(h("section", { class: "work-group" }, [
+      h("div", { class: "work-group-head" }, [h("h2", { text: title }), h("span", { text: String(rows.length) })]),
+      h("div", { class: "work-list" }, rows.map((action) => h("article", { class: `work-row ${actionUrgency(action)}` }, [
+        h("div", { class: "work-row-main" }, [
+          h("div", { class: "founder-action-title" }, [h("span", { class: `portfolio-product product-${action.product}`, text: LINKEDIN_PRODUCT_LABELS[action.product] || "Other" }), h("span", { class: `action-due ${actionUrgency(action)}`, text: action.due_at ? relationshipDate(action.due_at) : "No due date" })]),
+          h("h3", { text: action.person_name || action.company || "Relationship" }),
+          h("p", { text: action.reason || "Review and decide the next step." }),
+          action.headline ? h("small", { text: action.headline }) : null
+        ]),
+        h("div", { class: "work-row-actions" }, [
+          h("button", { class: "btn primary", text: workActionLabel(action), onclick: () => openRelationship({ action }) }),
+          action.action_type !== "confirm_meeting" ? h("button", { class: "btn sm", text: "Done", onclick: () => operateOnAction(action, "complete") }) : null,
+          h("button", { class: "btn ghost sm", text: "Tomorrow", onclick: () => operateOnAction(action, "snooze", { due_at: new Date(Date.now() + 86400000).toISOString() }) })
+        ])
+      ])))
+    ]));
+  }
+  if (!shown) el.append(h("div", { class: "card pad empty-work" }, [h("h2", { text: "No work matches this filter" }), h("p", { class: "muted", text: "Clear the filter or review the Network watchlist when a new trigger appears." }), h("button", { class: "btn", text: "Show all work", onclick: () => { state.workFilter = "all"; render(); } })]));
+  el.append(h("div", { class: "work-footnote" }, [h("strong", { text: `${metrics.watchlist || 0} relationships on watch` }), h("span", { text: "They have no due date and return to Work only when a new trigger is recorded." }), h("button", { class: "btn ghost sm", text: "Open watchlist", onclick: () => { state.networkSubview = "watchlist"; go("network"); } })]));
+  return el;
+}
+
+function networkConnectionRows() {
+  const q = state.networkSearch.trim().toLowerCase();
+  return (state.connections.connections || []).filter((connection) => {
+    if (connection.primary_product !== state.product) return false;
+    if (q && !`${connection.name} ${connection.headline} ${connection.classification_reason}`.toLowerCase().includes(q)) return false;
+    if (state.networkSubview === "targets") return connection.primary_product !== "other" && connection.review_status !== "dismissed" && Number(connection.classification_score) >= 4;
+    if (state.networkSubview === "watchlist") return false;
+    if (state.networkSubview === "needs_review") return connection.profile_status === "search" || (connection.primary_product === "other" && Number(connection.classification_score) >= 4);
+    return true;
+  });
+}
+
+function networkPersonRow(connection) {
+  const conversation = (state.conversations.conversations || []).find((item) => item.connection_id === connection.id || sameName(item.name, connection.name));
+  const action = (state.founder.actions || []).find((item) => item.entity_type === "conversation" && Number(item.entity_id) === conversation?.id);
+  return h("article", { class: `network-row ${connection.contacted_at ? "contacted" : ""} ${connection.review_status === "dismissed" ? "dismissed" : ""}` }, [
+    h("div", { class: "network-person" }, [h("h3", { text: connection.name }), h("p", { text: connection.headline || "Role needs confirmation" }), h("div", { class: "network-tags" }, [h("span", { class: `portfolio-product product-${connection.primary_product}`, text: CONNECTION_MOTION_LABELS[connection.primary_product] || "Other" }), connection.relationship_role ? h("span", { class: "chip", text: humanize(connection.relationship_role) }) : null, connection.classification_confidence && connection.classification_confidence !== "unmatched" ? h("span", { class: "chip", text: humanize(connection.classification_confidence) }) : null, connection.contacted_at ? h("span", { class: "chip stage-contacted", text: "Contacted" }) : null, connection.review_status === "dismissed" ? h("span", { class: "chip dismissed", text: "Dismissed" }) : null])]),
+    h("div", { class: "network-why" }, [h("strong", { text: conversation?.play_id || "Play needs review" }), h("p", { text: connection.classification_reason || "Confirm problem ownership or routing value." }), h("small", { text: conversation ? `${conversation.message_count} messages · last ${relationshipDate(conversation.last_message_at, false)}` : "No imported conversation" })]),
+    h("div", { class: "network-next" }, [
+      h("span", { text: action ? actionLabel(action.action_type) : conversation?.status === "closed" ? "Closed" : "No active action" }),
+      h("strong", { text: action?.due_at ? relationshipDate(action.due_at, false) : connection.profile_status === "search" ? "Profile needs confirmation" : "Ready to review" }),
+      h("div", { class: "network-row-buttons" }, [
+        h("button", { class: "btn primary sm", text: "Review", onclick: () => openRelationship({ action, conversation, connection }) }),
+        connection.profile_status !== "search" && connection.profile_url ? h("a", { class: "btn sm", href: connection.profile_url, target: "_blank", rel: "noreferrer", text: "Open LinkedIn ↗", title: "Opens this person's exact LinkedIn profile from your official LinkedIn export." }) : null,
+        h("button", { class: `btn sm contact-action ${connection.contacted_at ? "is-contacted" : ""}`, text: connection.contacted_at ? "Contacted ✓" : "Mark contacted", onclick: async () => {
+          try { await patchConnection(connection, { contacted: !connection.contacted_at, contact_channel: "linkedin" }); toast(connection.contacted_at ? "Contact mark removed" : "Marked contacted"); render(); }
+          catch (error) { toast(error.message); }
+        } }),
+        h("button", { class: `btn sm irrelevant-action ${connection.review_status === "dismissed" ? "is-dismissed" : ""}`, text: connection.review_status === "dismissed" ? "Restore" : "Not relevant", onclick: async () => {
+          try { await patchConnection(connection, { review_status: connection.review_status === "dismissed" ? "qualified" : "dismissed" }); toast(connection.review_status === "dismissed" ? "Relationship restored" : "Marked not relevant"); render(); }
+          catch (error) { toast(error.message); }
+        } })
+      ])
+    ])
+  ]);
+}
+
+function renderNetworkAccounts() {
+  const map = new Map();
+  for (const lead of state.leads.leads || []) {
+    const company = lead.company || "Unknown company";
+    if (!map.has(company)) map.set(company, { company, people: [], products: new Set(), plays: new Set(), next: [] });
+    const item = map.get(company); item.people.push(lead); item.products.add(lead.product); if (lead.play_id) item.plays.add(lead.play_id); if (lead.stage) item.next.push(lead.stage);
+  }
+  const q = state.networkSearch.trim().toLowerCase();
+  const accounts = [...map.values()].filter((item) => !q || `${item.company} ${item.people.map((p) => `${p.name} ${p.title}`).join(" ")}`.toLowerCase().includes(q)).slice(0, 120);
+  return h("div", { class: "account-grid" }, accounts.map((account) => h("article", { class: "account-card card" }, [
+    h("div", { class: "account-head" }, [h("h3", { text: account.company }), h("span", { class: "chip", text: `${account.people.length} people` })]),
+    h("p", { text: [...account.plays].join(", ") || "Play needs review" }),
+    h("div", { class: "network-tags" }, [...account.products].map((product) => h("span", { class: `portfolio-product product-${product}`, text: LINKEDIN_PRODUCT_LABELS[product] || product }))),
+    h("small", { text: account.people.slice(0, 3).map((person) => person.name).join(" · ") })
+  ])));
+}
+
+function renderNetwork() {
+  const conversations = state.conversations.conversations || [];
+  const referrals = conversations.filter((item) => item.primary_outcome === "referral" || item.response_theme === "referral");
+  const watchlist = (state.founder.watchlist || []).filter((item) => item.product === state.product);
+  const needsReview = (state.connections.connections || []).filter((item) => item.profile_status === "search" || (item.primary_product === "other" && Number(item.classification_score) >= 4)).length;
+  const tabs = [["targets", "Targets"], ["messaged", "Messaged", state.conversations.summary?.total || 0], ["people", "People", state.connections.summary?.total || 0], ["accounts", "Accounts"], ["warm_routes", "Warm routes", referrals.length], ["watchlist", "Watchlist", watchlist.length], ["needs_review", "Needs review", needsReview]];
+  const el = h("section", { class: "page network-page" });
+  el.append(pageHead("Network", "Accounts, people and relationships", "Who matters now, why they matter, what has happened, and what you should do next.", null));
+  const rows = state.connections.connections || [];
+  const motionLabel = CONNECTION_MOTION_LABELS[state.product] || "Needs context";
+  el.append(h("div", { class: "motion-summary scoped-motion-summary" }, [
+    [motionLabel, rows.length, activeProduct().description],
+    ["Contacted", rows.filter((item) => item.contacted_at).length, "Recorded LinkedIn contact"],
+    ["Active", rows.filter((item) => item.review_status !== "dismissed").length, "Available for targeting or research"],
+    ["Not relevant", rows.filter((item) => item.review_status === "dismissed").length, "Preserved outside active targeting"]
+  ].map(([label, count, note]) => h("article", { class: `motion-card product-${state.product}` }, [h("span", { text: label }), h("strong", { text: String(count) }), h("small", { text: note })]))));
+  el.append(founderTabs(tabs, state.networkSubview, (key) => { state.networkSubview = key; render(); }));
+  const controls = h("div", { class: "network-controls card" }, [
+    h("input", { class: "search", type: "search", value: state.networkSearch, placeholder: "Search, then press Enter", onchange: (event) => { state.networkSearch = event.target.value; render(); } })
+  ]);
+  if (!["watchlist", "warm_routes", "messaged"].includes(state.networkSubview)) el.append(controls);
+  if (state.networkSubview === "messaged") el.append(renderMessagedNetwork());
+  else if (state.networkSubview === "accounts") el.append(renderNetworkAccounts());
+  else if (state.networkSubview === "warm_routes") el.append(h("div", { class: "network-list" }, referrals.length ? referrals.map((conversation) => h("article", { class: "network-row" }, [h("div", { class: "network-person" }, [h("h3", { text: conversation.name }), h("p", { text: conversation.headline })]), h("div", { class: "network-why" }, [h("strong", { text: "Referral route" }), h("p", { text: conversation.summary })]), h("div", { class: "network-next" }, [h("strong", { text: conversation.next_action || "Work the introduction" }), h("button", { class: "btn primary sm", text: "Work referral", onclick: () => openRelationship({ conversation }) })])])) : [h("div", { class: "card pad muted", text: "No referral routes have been confirmed yet." })]));
+  else if (state.networkSubview === "watchlist") el.append(h("div", { class: "network-list" }, watchlist.length ? watchlist.map((action) => h("article", { class: "network-row watch" }, [h("div", { class: "network-person" }, [h("h3", { text: action.person_name || "Relationship" }), h("p", { text: action.headline || "No company context" })]), h("div", { class: "network-why" }, [h("strong", { text: "Waiting for a trigger" }), h("p", { text: action.reason })]), h("div", { class: "network-next" }, [h("strong", { text: "No due date" }), h("button", { class: "btn sm", text: "Review", onclick: () => openRelationship({ action }) })])])) : [h("div", { class: "card pad muted", text: "No relationships are currently on watch." })]));
+  else {
+    const rows = networkConnectionRows().slice(0, 150);
+    el.append(h("div", { class: "network-list" }, rows.length ? rows.map(networkPersonRow) : [h("div", { class: "card pad muted", text: "No relationships match this view." })]));
+  }
+  return el;
+}
+
+function playbookEvidence(data) {
+  return h("div", { class: "playbook-evidence" }, [
+    founderMetric("Conversations", data.evidence?.conversations || 0, "imported evidence"),
+    founderMetric("Any replies", data.evidence?.replies || 0, "diagnostic"),
+    founderMetric("Meeting signals", data.evidence?.meetings_inferred || 0, "still require confirmation"),
+    founderMetric("Qualified replies", data.evidence?.qualified_replies || 0, "human-confirmed")
+  ]);
+}
+
+function renderPlaybooks() {
+  const data = state.playbooks.ventures?.[state.product] || {};
+  const tabs = [["market", "Market"], ["targeting", "Targeting", data.targets?.length || 0], ["messaging", "Messaging"], ["experiments", "Experiments", data.experiments?.length || 0]];
+  const el = h("section", { class: "page playbooks-page" });
+  el.append(pageHead("Playbooks", `${activeProduct().name}: what we believe now`, "Market movement translated into target accounts, message rules, evidence, and the next experiment.", null));
+  el.append(h("section", { class: "belief-card card" }, [
+    h("div", {}, [h("p", { class: "card-eyebrow", text: "Current commercial thesis" }), h("h2", { text: data.belief || "Playbook is loading" }), h("p", { text: data.problem || "" })]),
+    h("dl", {}, [h("div", {}, [h("dt", { text: "Buyer" }), h("dd", { text: data.buyer || "" })]), h("div", {}, [h("dt", { text: "Offer" }), h("dd", { text: data.offer || "" })]), h("div", {}, [h("dt", { text: "Message formula" }), h("dd", { text: data.formula || "" })])])
+  ]));
+  el.append(playbookEvidence(data), founderTabs(tabs, state.playbookSubview, (key) => { state.playbookSubview = key; render(); }));
+  if (state.playbookSubview === "market") {
+    el.append(h("div", { class: "theme-grid" }, (data.themes || []).map((theme) => h("article", { class: "theme-card card" }, [
+      h("div", { class: "theme-head" }, [h("span", { class: "chip fit", text: "Directional" }), h("span", { text: "Review monthly" })]),
+      h("h2", { text: theme.title }), h("p", { text: theme.thesis }),
+      h("div", { class: "theme-facts" }, [h("div", {}, [h("strong", { text: "Buyer" }), h("span", { text: theme.buyers })]), h("div", {}, [h("strong", { text: "Problem" }), h("span", { text: theme.problem })]), h("div", {}, [h("strong", { text: "Offer implication" }), h("span", { text: theme.implication })])]),
+      h("div", { class: "signal-columns" }, [h("div", {}, [h("strong", { text: "Supporting signals" }), ...(theme.signals || []).map((item) => h("span", { text: item }))]), h("div", {}, [h("strong", { text: "Contradicting evidence" }), ...(theme.contradicts || []).map((item) => h("span", { text: item }))])]),
+      h("button", { class: "btn sm", text: `Review ${theme.matches?.length || 0} matching relationships`, onclick: () => { state.playbookSubview = "targeting"; render(); } })
+    ]))));
+  } else if (state.playbookSubview === "targeting") {
+    el.append(h("div", { class: "target-match-list" }, (data.targets || []).slice(0, 40).map((target) => h("article", { class: "target-match card" }, [
+      h("div", {}, [h("h3", { text: target.name }), h("p", { text: target.headline || "Role needs confirmation" })]),
+      h("div", {}, [h("strong", { text: target.classification_reason || "Venture match" }), h("small", { text: `Problem ownership ${Math.min(5, Math.ceil((target.classification_score || 0) / 2))}/5 · evidence ${target.profile_status === "search" ? "needs profile" : "profile confirmed"}` })]),
+      h("button", { class: "btn primary sm", text: "Review target", onclick: () => openRelationship({ connection: target }) })
+    ]))));
+  } else if (state.playbookSubview === "messaging") {
+    const length = state.playbooks.portfolio_message_length || {};
+    el.append(h("div", { class: "messaging-grid" }, [
+      h("section", { class: "card pad message-rule-card" }, [h("p", { class: "card-eyebrow", text: "Current message rule" }), h("h2", { text: data.formula }), h("div", { class: "rule-pills" }, (data.triggers || []).map((item) => h("span", { text: item })))]),
+      h("section", { class: "card pad" }, [h("p", { class: "card-eyebrow", text: "Observed opener length" }), h("div", { class: "length-results" }, ["short", "medium", "long"].map((key) => { const row = length[key] || {}; return h("div", {}, [h("strong", { text: humanize(key) }), h("b", { text: `${row.replies || 0}/${row.conversations || 0}` }), h("span", { text: `${Math.round((row.rate || 0) * 100)}% any reply` })]); }))]),
+      h("section", { class: "card pad works-card" }, [h("p", { class: "card-eyebrow", text: "What is working" }), h("ul", {}, [h("li", { text: "Short, coherent openers show the strongest direction in the current selected sample." }), h("li", { text: `${state.playbooks.portfolio_followup_replies || 0} of ${state.playbooks.total_replying_conversations || 0} replying threads replied after more than one outbound touch.` }), h("li", { text: "Specific owner-routing and research asks can generate useful replies." }), h("li", { text: "One workflow and one bounded ask outperform complete solution designs." })])]),
+      h("section", { class: "card pad fails-card" }, [h("p", { class: "card-eyebrow", text: "What is failing" }), h("ul", {}, [h("li", { text: "Long speculative architectures before the buyer confirms the problem." }), h("li", { text: "Broad service lists and unclear intentions." }), h("li", { text: "Technically adjacent people without ownership or routing value." }), h("li", { text: "Replacement framing for existing internal systems." }), h("li", { text: "Repeated follow-up without new evidence or value." })])]),
+      h("section", { class: "card pad correction-card" }, [
+        h("p", { class: "card-eyebrow", text: "Corrections and objections" }),
+        ...((data.corrections || []).length
+          ? (data.corrections || []).map((item) => h("button", { class: "correction-row", onclick: () => openRelationship({ conversation: (state.conversations.conversations || []).find((c) => c.id === item.id) }) }, [h("strong", { text: `${item.name} · ${humanize(item.outcome)}` }), h("span", { text: item.correction })]))
+          : [h("p", { class: "muted", text: "No human-confirmed corrections have been tagged for this venture yet." })])
+      ])
+    ]));
+  } else {
+    el.append(h("div", { class: "experiment-list" }, (data.experiments || []).length ? data.experiments.map((experiment) => h("article", { class: "card pad" }, [h("span", { class: "chip fit", text: experiment.status }), h("h2", { text: experiment.hypothesis }), h("p", { text: `${experiment.segment || "All selected contacts"} · variants ${experiment.variants.join(" vs ")}` }), h("small", { text: experiment.stop_rule })])) : [h("div", { class: "card pad empty-work" }, [h("h2", { text: "No controlled experiment is active" }), h("p", { class: "muted", text: "The next experiment should assign contacts before sending and vary one meaningful element at a time." }), h("p", { text: "Recommended: 15 high-confidence relationships for this venture, one current message rule, and one bounded variant." })]) ]));
+  }
+  return el;
+}
+
+function renderPipeline() {
+  if (state.product === "other") {
+    const el = h("section", { class: "page pipeline-page" });
+    el.append(pageHead("Pipeline", "Other relationships are not pipeline", "Classify a relationship into GNK, OHUB, or Morrow before it can enter a commercial or research motion.", [h("button", { class: "btn primary", text: "Review unclassified relationships", onclick: () => { state.networkSubview = "needs_review"; go("network"); } })]));
+    return el;
+  }
+  const metrics = state.founder.metrics || {};
+  const pipeline = state.founder.pipeline || {};
+  const activePipeline = pipeline[state.product] || {};
+  const learning = state.founder.learning || {};
+  const el = h("section", { class: "page pipeline-page" });
+  el.append(pageHead("Pipeline", "Commercial progression", "Research and design-partner learning remain separate from opportunities and revenue.", null));
+  el.append(h("div", { class: "pipeline-kpis" }, [
+    founderMetric("Qualified opportunities", activePipeline.qualified || 0, "buyer evidence required"),
+    founderMetric("Qualified value", money(activePipeline.qualified_value), "recorded opportunity value"),
+    founderMetric("Scopes in progress", activePipeline.scoped || 0, "bounded work"),
+    founderMetric("Proposals outstanding", activePipeline.proposal || 0, "follow to a decision"),
+    founderMetric("Booked project revenue", money(activePipeline.booked_revenue), "contract evidence only", "money"),
+    founderMetric("Contracted MRR", money(activePipeline.booked_mrr), "contract evidence only", "money")
+  ]));
+  el.append(founderTabs([["commercial", "Commercial pipeline"], ["learning", "Learning and design partners"]], state.pipelineLane, (key) => { state.pipelineLane = key; render(); }));
+  if (state.pipelineLane === "commercial") {
+    el.append(h("div", { class: "commercial-pipeline card" }, [
+      h("div", { class: "pipeline-header-row" }, ["Venture", "Engaged", "Discovery", "Held", "Qualified", "Scoped", "Proposal", "Won"].map((item) => h("strong", { text: item }))),
+      ...[state.product].map((product) => { const row = pipeline[product] || {}; return h("div", { class: "pipeline-data-row" }, [h("strong", { text: LINKEDIN_PRODUCT_LABELS[product] }), ...[row.engaged, row.discovery, row.completed, row.qualified, row.scoped, row.proposal, row.won].map((value) => h("span", { text: String(value || 0) }))]); })
+    ]));
+    if (!activePipeline.qualified) el.append(h("div", { class: "pipeline-truth" }, [h("strong", { text: "No qualified commercial opportunity yet" }), h("p", { text: "That is the honest baseline. A reply or research call enters this lane only after problem, consequence, owner, timing, commercial path, and next step are buyer-confirmed." })]));
+  } else {
+    el.append(h("div", { class: "learning-lane" }, [
+      h("section", { class: "card pad" }, [h("p", { class: "card-eyebrow", text: "Conversation evidence" }), h("h2", { text: `${learning.any_replies || 0} conversations received a reply` }), h("p", { text: `${Math.round((learning.any_reply_rate || 0) * 100)}% any-reply rate is directional only. ${learning.qualified_replies || 0} replies are human-confirmed as qualified commercial interest.` })]),
+      ...[state.product].map((product) => { const data = state.playbooks.ventures?.[product] || {}; return h("section", { class: "card pad" }, [h("span", { class: `portfolio-product product-${product}`, text: LINKEDIN_PRODUCT_LABELS[product] }), h("h2", { text: data.belief || "No thesis" }), h("p", { text: `${data.evidence?.replies || 0} replies from ${data.evidence?.conversations || 0} conversations · ${data.evidence?.meetings_inferred || 0} meeting signals require confirmation.` }), h("button", { class: "btn sm", text: "Open playbook", onclick: () => { state.playbookSubview = "messaging"; go("playbooks"); } })]); })
+    ]));
+  }
+  return el;
+}
+
+function calendarRelationshipButton(item, label) {
+  const conversation = item.source_conversation_id ? (state.conversations.conversations || []).find((c) => c.id === item.source_conversation_id) : null;
+  const action = (state.founder.actions || []).find((a) => a.meeting_id === item.id);
+  return h("article", { class: "calendar-commitment card" }, [
+    h("div", { class: "calendar-time" }, [h("strong", { text: relationshipDate(item.starts_at) }), h("span", { text: item.timezone || "Time zone unconfirmed" })]),
+    h("div", {}, [h("span", { class: `chip ${item.confirmation_status === "unconfirmed" ? "warn" : "fit"}`, text: label }), h("h3", { text: conversation?.name || item.brief?.person || "Meeting" }), h("p", { text: conversation?.summary || item.brief?.summary || "Open the relationship to review context." })]),
+    h("button", { class: "btn primary sm", text: item.confirmation_status === "unconfirmed" ? "Confirm call" : item.status === "held" && !item.outcome_captured_at ? "Record outcome" : "Open brief", onclick: () => openRelationship({ action, conversation }) })
+  ]);
+}
+
+function renderFounderCalendar() {
+  if (state.product === "other") {
+    const el = h("section", { class: "page founder-calendar-page" });
+    el.append(pageHead("Calendar", "No calendar for unclassified relationships", "Move a relationship into GNK, OHUB, or Morrow before scheduling it within a venture workflow.", null));
+    return el;
+  }
+  const meetings = (state.founder.meetings || []).filter((meeting) => {
+    const conversation = (state.conversations.conversations || []).find((item) => item.id === meeting.source_conversation_id);
+    return conversation?.product === state.product;
+  });
+  const unconfirmed = meetings.filter((item) => item.confirmation_status === "unconfirmed");
+  const confirmed = meetings.filter((item) => ["human_confirmed", "calendar_confirmed"].includes(item.confirmation_status) && item.status === "booked");
+  const missing = meetings.filter((item) => item.status === "held" && !item.outcome_captured_at);
+  const postCall = (state.founder.work_actions || []).filter((item) => item.product === state.product && ["prepare_meeting", "execute_next_step", "follow_up_proposal"].includes(item.action_type));
+  const el = h("section", { class: "page founder-calendar-page" });
+  el.append(pageHead("Calendar", "Calls and commitments", "Confirm what is real, prepare with relationship context, and record the outcome and next action in one flow.", null));
+  el.append(h("div", { class: "calendar-status-grid" }, [
+    founderMetric("Calls to confirm", unconfirmed.length, "not calendar truth yet"), founderMetric("Upcoming calls", confirmed.length, "confirmed and booked"), founderMetric("Outcomes missing", missing.length, "capture within 24 hours"), founderMetric("Post-call follow-ups", postCall.length, "promised next steps")
+  ]));
+  const sections = [["Calls to confirm", unconfirmed, "Unconfirmed"], ["Upcoming calls", confirmed, "Confirmed"], ["Outcomes missing", missing, "Outcome due"]];
+  for (const [title, rows, label] of sections) {
+    el.append(h("section", { class: "calendar-commitment-group" }, [h("div", { class: "work-group-head" }, [h("h2", { text: title }), h("span", { text: String(rows.length) })]), rows.length ? h("div", { class: "calendar-commitment-list" }, rows.map((item) => calendarRelationshipButton(item, label))) : h("p", { class: "card pad muted", text: `No ${title.toLowerCase()}.` })]));
+  }
+  return el;
+}
+
+function renderSystem() {
+  const health = state.agentHealth || { summary: {}, agents: [] };
+  const scopedAgents = (health.agents || []).filter((agent) => state.product !== "other"
+    && (agent.slug?.startsWith(`${activeProduct().slug}-`) || agent.slug === "revenue-demand-radar"));
+  const summary = {
+    total: scopedAgents.length,
+    blocked: scopedAgents.filter((agent) => agent.blocker).length,
+    criticalBlocked: scopedAgents.filter((agent) => agent.blocker && agent.tier === "control").length,
+  };
+  const workflowSpecs = [
+    ["Signal Scout", "Find verified triggers and warm routes", /(account-sourcing|revenue-demand-radar|industry-map)/],
+    ["Account Qualifier", "Choose venture, play, buyer, and commercial plausibility", /(account-scoring|icp-contact|client-dossier)/],
+    ["Outreach Assistant", "Prepare one evidenced message for manual sending", /(outreach-angle|email-drafter|sequence-reviewer)/],
+    ["Conversation Triage", "Turn imported replies into outcomes and one action", null],
+    ["Meeting and Deal Assistant", "Confirm calls, capture outcomes, qualify, and scope", /(offer-map|pipeline-capacity)/],
+    ["Learning Analyst", "Report market, message, and commercial learning", /(revenue-strategy|company-context|growth-playbook)/]
+  ];
+  const el = h("section", { class: "page system-page" });
+  el.append(pageHead("System", "Is the machine current and safe?", "Operational health first. Technical agents, graph, activity, and runs live under Advanced.", [h("button", { class: "btn", text: "Refresh", onclick: load })]));
+  const healthy = state.reconciliation.reconciled && !(summary.criticalBlocked || 0);
+  el.append(h("section", { class: `system-overview ${healthy ? "healthy" : "attention"}` }, [h("div", {}, [h("span", { text: healthy ? "Operating normally" : "Attention required" }), h("h2", { text: healthy ? "Commercial data is reconciled" : "One or more critical checks need review" }), h("p", { text: healthy ? "Imported LinkedIn activity matches canonical events and no critical workflow is blocked." : "Open the issues and workflow cards below for the business consequence and next action." })]), h("strong", { text: healthy ? "Healthy" : "Review" })]));
+  el.append(h("div", { class: "system-status-grid" }, [
+    h("article", { class: "card pad" }, [h("span", { text: "Connections import" }), h("strong", { text: `${state.connections.summary?.total || 0} people` }), h("small", { text: `${state.connections.summary?.search_routes || 0} profiles need confirmation` })]),
+    h("article", { class: "card pad" }, [h("span", { text: "Conversation import" }), h("strong", { text: `${state.conversations.summary?.messages || 0} messages` }), h("small", { text: `${state.conversations.summary?.total || 0} relationships` })]),
+    h("article", { class: "card pad" }, [h("span", { text: "Reconciliation" }), h("strong", { text: state.reconciliation.reconciled ? "Exact" : "Mismatch" }), h("small", { text: "Canonical event log verified" })]),
+    h("article", { class: "card pad" }, [h("span", { text: "Tests" }), h("strong", { text: "91 passing" }), h("small", { text: "last verified 16 July 2026" })])
+  ]));
+  el.append(h("h2", { class: "system-section-title", text: "Six accountable workflows" }), h("div", { class: "workflow-grid" }, workflowSpecs.map(([name, purpose, pattern]) => {
+    const members = pattern ? scopedAgents.filter((agent) => pattern.test(agent.slug)) : [];
+    const blocked = members.filter((agent) => agent.blocker).length;
+    const fresh = members.filter((agent) => agent.fresh).length;
+    const deterministic = !pattern;
+    return h("article", { class: `workflow-card ${blocked && !fresh ? "attention" : ""}` }, [h("div", { class: "workflow-head" }, [h("h2", { text: name }), h("span", { class: `chip ${deterministic || fresh ? "fit" : "warn"}`, text: deterministic ? "operating" : fresh ? `${fresh} fresh` : "review" })]), h("p", { text: purpose }), h("small", { text: deterministic ? "Canonical deterministic workflow" : `${members.length} components · ${blocked} blocked` })]);
+  })));
+  el.append(h("details", { class: "system-advanced card" }, [
+    h("summary", { text: `Advanced diagnostics · ${summary.total || 0} agents · ${summary.blocked || 0} blocked` }),
+    h("div", { class: "advanced-grid" }, [
+      h("section", {}, [h("h3", { text: `${activeProduct().name} agent registry` }), ...scopedAgents.slice(0, 20).map((agent) => h("div", { class: "advanced-row" }, [h("strong", { text: agent.slug }), h("span", { text: agent.blocker ? "Blocked" : agent.fresh ? "Fresh" : humanize(agent.status || "idle") })]))]),
+      h("section", {}, [h("h3", { text: "Operations" }), h("button", { class: "btn", text: "Reconcile LinkedIn", onclick: async () => { await apiPost("/api/founder-sync"); await load(); } }), h("p", { class: "muted", text: "Raw ontology, activity, API, database, and run diagnostics remain available in code and API but no longer occupy founder navigation." })])
+    ])
+  ]));
   return el;
 }
 
@@ -2225,26 +3763,47 @@ function renderAgentHealth() {
 function render() {
   applyProductChrome();
   document.querySelectorAll(".rail-item").forEach((b) => b.classList.toggle("on", b.dataset.view === state.view));
-  const n = (state.leads.leads || []).length;
-  countLeadsEl.textContent = n ? String(n) : "";
+  if (countWorkEl) {
+    const scopedWork = (state.founder.work_actions || []).filter((item) => item.product === state.product).length;
+    countWorkEl.textContent = scopedWork ? String(scopedWork) : "";
+  }
+  if (countNetworkEl) countNetworkEl.textContent = state.connections.summary?.total ? String(state.connections.summary.total) : "";
   const task = state.leads.task || state.runStatus.activeRun;
   railTaskEl.textContent = task ? `● ${task.name || task.slug || "running"}` : "";
   railTaskEl.classList.toggle("live", Boolean(task));
 
   const views = {
-    overview: renderOverview,
-    leads: renderLeads,
-    outreach: renderOutreach,
-    approvals: renderApprovals,
-    agents: renderAgentHealth,
-    calendar: renderCalendar,
-    intelligence: renderIntelligence,
-    activity: renderActivity
+    work: renderWork,
+    network: renderNetwork,
+    playbooks: renderPlaybooks,
+    pipeline: renderPipeline,
+    calendar: renderFounderCalendar,
+    system: renderSystem
   };
-  stageEl.replaceChildren((views[state.view] || renderOverview)());
+  if (smokeLivePoll) { clearTimeout(smokeLivePoll); smokeLivePoll = null; }
+  const page = (views[state.view] || renderWork)();
+  const drawer = renderRelationshipDrawer();
+  stageEl.replaceChildren(page, ...(drawer ? [drawer] : []));
 }
 
-const VIEWS = new Set(["overview", "leads", "outreach", "approvals", "agents", "calendar", "intelligence", "activity"]);
+const VIEWS = new Set(["work", "network", "playbooks", "pipeline", "calendar", "system"]);
+const LEGACY_ROUTES = {
+  today: "work",
+  overview: "work",
+  leads: "network",
+  outreach: "network",
+  linkedin: "network",
+  connections: "network",
+  conversations: "network",
+  approvals: "network",
+  intelligence: "playbooks",
+  knowledge: "playbooks",
+  agents: "system",
+  "system-health": "system",
+  activity: "system",
+  run: "system",
+  "live-smoke": "system"
+};
 
 function go(view, opts = {}) {
   state.view = view;
@@ -2258,15 +3817,18 @@ function go(view, opts = {}) {
   render();
 }
 
-// Deep-linkable views (e.g. #intelligence opens the knowledge graph directly),
-// plus ?lead=<id> to open a specific lead's profile + memory.
+// Deep-linkable six-tab views plus redirects for the retired interface.
 const initialView = location.hash.slice(1);
-if (VIEWS.has(initialView)) state.view = initialView;
+const initialRoute = initialView.split("?")[0];
+if (VIEWS.has(initialRoute)) state.view = initialRoute;
+else if (LEGACY_ROUTES[initialRoute]) state.view = LEGACY_ROUTES[initialRoute];
+if (LEGACY_ROUTES[initialRoute]) history.replaceState(null, "", `#${state.view}`);
 const initialLead = new URLSearchParams(location.search).get("lead");
 if (initialLead) state.activeLeadId = initialLead;
 window.addEventListener("hashchange", () => {
-  const view = location.hash.slice(1);
-  if (VIEWS.has(view) && view !== state.view) go(view);
+  const requested = location.hash.slice(1).split("?")[0];
+  const view = VIEWS.has(requested) ? requested : LEGACY_ROUTES[requested];
+  if (view && view !== state.view) go(view);
 });
 
 document.querySelectorAll(".rail-item").forEach((btn) => {

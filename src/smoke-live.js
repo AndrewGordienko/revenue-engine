@@ -12,14 +12,15 @@ import { STRATEGY_VERSION } from "./sales-plays.js";
 export const ACTIVE_PLAYS = {
   gnk: ["GNK-AI-01", "GNK-BE-01", "GNK-DATA-01"],
   outagehub: ["OHUB-ISP-01", "OHUB-EMBED-01", "OHUB-FAC-01"],
+  morrow: ["MORROW-COPACK-01", "MORROW-CPG-01"],
 };
 
 // Accepted RAW product values in a manifest. Anything else is rejected outright
 // (never silently coerced to a brand).
-const RAW_PRODUCTS = new Set(["gnk", "outagehub", "ohub"]);
-const normalizeProduct = (p) => (p === "ohub" || p === "outagehub" ? "outagehub" : "gnk");
+const RAW_PRODUCTS = new Set(["gnk", "outagehub", "ohub", "morrow"]);
+const normalizeProduct = (p) => (p === "ohub" || p === "outagehub" ? "outagehub" : p === "morrow" ? "morrow" : "gnk");
 // Brand of a RAW product value, or null when the value is not a valid product.
-const brandOf = (raw) => (raw === "gnk" ? "gnk" : raw === "outagehub" || raw === "ohub" ? "outagehub" : null);
+const brandOf = (raw) => (raw === "gnk" ? "gnk" : raw === "outagehub" || raw === "ohub" ? "outagehub" : raw === "morrow" ? "morrow" : null);
 
 export function cohortGroupFor(product) {
   return `${normalizeProduct(product)}-live-smoke`;
@@ -53,9 +54,14 @@ export function validateManifest(accounts) {
     else if (!ACTIVE_PLAYS[brand].includes(a.play_id)) problems.push(`${where}: play ${a.play_id} is not an active ${brand} play`);
     if (a.domain) { if (domains.has(a.domain)) problems.push(`${where}: duplicate domain ${a.domain}`); domains.add(a.domain); }
   }
+  // Independent canaries: validate one-per-play + full coverage only for the brands
+  // ACTUALLY present in this manifest (a venture can run its smoke alone). The required
+  // count per brand is its number of active plays, not a hardcoded 3.
+  const brandsPresent = new Set(accounts.map((a) => brandOf(a.product)).filter(Boolean));
   for (const [product, plays] of Object.entries(ACTIVE_PLAYS)) {
+    if (!brandsPresent.has(product)) continue;
     const forBrand = accounts.filter((a) => brandOf(a.product) === product);
-    if (forBrand.length !== 3) problems.push(`${product}: expected exactly 3 accounts, got ${forBrand.length}`);
+    if (forBrand.length !== plays.length) problems.push(`${product}: expected exactly ${plays.length} accounts, got ${forBrand.length}`);
     for (const play of plays) {
       const n = forBrand.filter((a) => a.play_id === play).length;
       if (n !== 1) problems.push(`${product}: expected exactly one account for ${play}, got ${n}`);
@@ -77,9 +83,41 @@ export function isLiveSmokeMode(env = process.env) {
   return env.LIVE_SMOKE === "1" || fs.existsSync(manifestPath());
 }
 
+// Self-heal: a live-smoke cohort group may still hold leads from a SUPERSEDED
+// manifest (e.g. an account that was reassigned to another play or dropped). Those
+// stale leads would leak into the scoped run and trip assertManifestScope. Retire
+// them by moving them OUT of the live-smoke namespace into a 'retired-' cohort —
+// never deleted, never touching non-live-smoke (e.g. legacy-import) leads. Returns
+// what was retired so the orchestrator can report it.
+export function retireStaleLiveSmoke(database, accounts) {
+  const now = () => new Date().toISOString();
+  const allowedByGroup = new Map();
+  for (const a of accounts) {
+    const group = cohortGroupFor(a.product);
+    if (!allowedByGroup.has(group)) allowedByGroup.set(group, new Set());
+    allowedByGroup.get(group).add(a.domain);
+  }
+  const retired = [];
+  for (const [group, allowed] of allowedByGroup) {
+    const rows = database.prepare("SELECT id, company_domain, cohort_id FROM leads WHERE cohort_id LIKE ?").all(`${group}%`);
+    for (const row of rows) {
+      if (allowed.has(row.company_domain) || row.cohort_id.startsWith("retired-")) continue;
+      const retiredCohort = `retired-${row.cohort_id}`;
+      database.prepare(`INSERT OR IGNORE INTO cohorts(cohort_id,product,strategy_version,play_id,status,created_at,note)
+        SELECT ?,product,strategy_version,play_id,'retired',?, 'retired stale live-smoke lead (not in current manifest)' FROM cohorts WHERE cohort_id=?`)
+        .run(retiredCohort, now(), row.cohort_id);
+      database.prepare("UPDATE leads SET cohort_id=?, updated_at=? WHERE id=?").run(retiredCohort, now(), row.id);
+      retired.push({ domain: row.company_domain, from: row.cohort_id, to: retiredCohort });
+    }
+  }
+  return retired;
+}
+
 export async function initLiveSmoke(accounts, database = db()) {
   const { ok, problems } = validateManifest(accounts);
   if (!ok) throw new Error(`invalid live-smoke manifest:\n- ${problems.join("\n- ")}`);
+  // Reconcile the live-smoke namespace to exactly the current manifest first.
+  const retired = retireStaleLiveSmoke(database, accounts);
   const seeded = [];
   for (const account of accounts) {
     const product = normalizeProduct(account.product);
@@ -93,7 +131,7 @@ export async function initLiveSmoke(accounts, database = db()) {
     }], product, { cohort_id: cohortId, play_id: account.play_id, strategy_version: STRATEGY_VERSION, stage: "live-smoke", note: `live-smoke ${account.play_id}` });
     seeded.push({ company: account.company, domain: account.domain, product, play_id: account.play_id, cohort_id: cohortId });
   }
-  return { seeded, groups: [...new Set(seeded.map((s) => cohortGroupFor(s.product)))] };
+  return { seeded, retired, groups: [...new Set(seeded.map((s) => cohortGroupFor(s.product)))] };
 }
 
 // A live-smoke cohort group must contain ONLY manifest accounts — no pre-existing
