@@ -10,6 +10,7 @@ import { normalizeProduct } from "./lineage.js";
 const TOUCH_KEYS = {
   gnk: ["trigger_and_outcome", "useful_point_of_view", "method_or_shaping", "router_close"],
   outagehub: ["workflow_pilot_hypothesis", "decision_grade_proof", "implementation_and_success", "annual_expansion", "router_close"],
+  morrow: ["linkedin_connection_request", "accepted_value_dm", "workflow_or_pilot_offer", "router_close"],
 };
 
 export function sequenceSkeleton(product) {

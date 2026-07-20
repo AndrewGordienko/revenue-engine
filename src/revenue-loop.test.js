@@ -85,7 +85,8 @@ test("synthetic prospect travels from approved cohort to booked meeting without 
   const report = buildPipelineReport(database, registry).products.find((entry) => entry.product === "gnk");
   assert.equal(report.actual.messages_sent, 1);
   assert.equal(report.actual.positive_replies, 1);
-  assert.equal(report.actual.meetings_held, 1);
+  assert.equal(report.actual.meetings_booked, 1);
+  assert.equal(report.actual.meetings_held, 0, "booking is not reported as a held meeting");
   assert.equal(report.actual.qualified_opportunities, 1);
 
   const memory = await readMemoryEvents("gnk", legacyLead.id);

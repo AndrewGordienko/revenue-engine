@@ -15,7 +15,7 @@ import {
   writeSchemaYaml
 } from "./ontology.js";
 
-const PRODUCTS = ["gnk", "outagehub"];
+const PRODUCTS = ["gnk", "outagehub", "morrow"];
 
 // Stages that imply a real conversation / touch happened.
 const CONVERSATION_STAGES = new Set(["contacted", "replied", "won", "lost"]);
@@ -169,7 +169,7 @@ function buildResearchOps(artifacts, ops, seen) {
   let nodes = 0;
   for (const [slug, artifact] of Object.entries(artifacts || {})) {
     if (!isResearchSlug(slug)) continue;
-    const product = slug.startsWith("outagehub-") ? "outagehub" : "gnk";
+    const product = slug.startsWith("outagehub-") ? "outagehub" : slug.startsWith("morrow-") ? "morrow" : "gnk";
     const { entities, relations } = mapResearchArtifact(product, slug, artifact);
     for (const entity of entities) {
       // Deterministic ids: last create wins on load, so re-emitting a shared

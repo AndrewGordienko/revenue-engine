@@ -13,7 +13,7 @@ import { fromRoot } from "./paths.js";
 // per line, reduced to state on read. Never rewritten in place, so history stays.
 
 function normalizeProduct(value) {
-  return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
+  return value === "outagehub" || value === "ohub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 function memoryPath(product = "gnk") {

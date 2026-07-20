@@ -12,6 +12,7 @@ export function buildPipelineReport(database = db(), registry = null) {
   const events = database.prepare("SELECT * FROM activity_events").all();
   const opportunities = database.prepare("SELECT * FROM opportunities").all();
   const contracts = database.prepare("SELECT * FROM contracts").all();
+  const meetings = database.prepare("SELECT * FROM meetings").all();
   const opportunityById = new Map(opportunities.map((opp) => [opp.id, opp]));
   const keys = [...new Set(leads.map((lead) => `${lead.product}|${lead.cohort_id}|${lead.play_id || "unassigned"}`))];
 
@@ -42,7 +43,9 @@ export function buildPipelineReport(database = db(), registry = null) {
       verified_contacts: cohortLeads.filter((lead) => lead.deliverability_status === "deliverable" && lead.address_found_or_guessed !== "guessed" && lead.deliverability_checked_at && Date.now() - new Date(lead.deliverability_checked_at).getTime() <= 90 * 86400000).length,
       messages_sent: cohortEvents.filter((event) => event.type === "sent").length,
       positive_replies: positiveReplies,
-      meetings_held: cohortEvents.filter((event) => event.type === "meeting").length,
+      meetings_booked: meetings.filter((meeting) => leadIds.has(meeting.lead_id) && meeting.status === "booked"
+        && ["human_confirmed", "calendar_confirmed"].includes(meeting.confirmation_status)).length,
+      meetings_held: meetings.filter((meeting) => leadIds.has(meeting.lead_id) && meeting.status === "held").length,
       qualified_opportunities: cohortOpps.filter((opp) => opp.qualification || STAGE_RANK[opp.stage] >= STAGE_RANK.qualified).length,
       proposals: cohortOpps.filter((opp) => STAGE_RANK[opp.stage] >= STAGE_RANK.proposal || (opp.stage === "lost" && opp.solution && opp.next_step_at)).length,
       wins: cohortOpps.filter((opp) => opp.stage === "won").length,
@@ -56,12 +59,12 @@ export function buildPipelineReport(database = db(), registry = null) {
     };
   });
 
-  const products = ["gnk", "outagehub"].map((product) => {
+  const products = ["gnk", "outagehub", "morrow"].map((product) => {
     const rows = cohorts.filter((row) => row.product === product);
     const sum = (field) => rows.reduce((total, row) => total + (Number(row[field]) || 0), 0);
     const actual = {
       researched_accounts: sum("researched_accounts"), verified_contacts: sum("verified_contacts"), messages_sent: sum("messages_sent"),
-      positive_replies: sum("positive_replies"), meetings_held: sum("meetings_held"), qualified_opportunities: sum("qualified_opportunities"),
+      positive_replies: sum("positive_replies"), meetings_booked: sum("meetings_booked"), meetings_held: sum("meetings_held"), qualified_opportunities: sum("qualified_opportunities"),
       proposals: sum("proposals"), wins: sum("wins"), booked_one_time_usd: sum("booked_one_time_usd"), booked_mrr_usd: sum("booked_mrr_usd"),
       expansion_mrr_usd: sum("expansion_mrr_usd"),
     };
@@ -70,14 +73,16 @@ export function buildPipelineReport(database = db(), registry = null) {
       ? round(marginRows.reduce((total, row) => total + row.implementation_gross_margin * row.booked_one_time_usd, 0) / marginRows.reduce((total, row) => total + row.booked_one_time_usd, 0), 3)
       : null;
     const ratio = (a, b) => b ? round(a / b, 3) : null;
-    const target = product === "gnk" ? registry?.commercialTarget?.campaignTargets : registry?.commercialTargets?.outagehub?.campaignTargets;
+    const target = product === "gnk"
+      ? registry?.commercialTarget?.campaignTargets
+      : registry?.commercialTargets?.[product]?.campaignTargets;
     return {
       product,
       target: target || null,
       actual,
       conversion: {
         positive_reply_rate: ratio(actual.positive_replies, actual.messages_sent),
-        reply_to_meeting_rate: ratio(actual.meetings_held, actual.positive_replies),
+        reply_to_meeting_rate: ratio(actual.meetings_booked, actual.positive_replies),
         meeting_to_qualified_rate: ratio(actual.qualified_opportunities, actual.meetings_held),
         qualified_to_proposal_rate: ratio(actual.proposals, actual.qualified_opportunities),
         proposal_to_win_rate: ratio(actual.wins, actual.proposals),

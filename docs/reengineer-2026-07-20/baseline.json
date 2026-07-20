@@ -1,0 +1,46 @@
+{
+  "captured_at": "2026-07-20T14:35:50.228Z",
+  "note": "Honest zero baseline before three-venture re-engineering.",
+  "backup": "data/backups/crm.pre-reengineer-2026-07-20T14-35-13-282Z.db",
+  "commercial_truth": {
+    "opportunities": 0,
+    "contracts": 0,
+    "outreach_messages": 0,
+    "meetings": 11,
+    "booked_one_time": 0,
+    "booked_mrr": 0
+  },
+  "inventory": {
+    "leads": 572,
+    "leads_by_product": [
+      {
+        "product": "gnk",
+        "n": 316
+      },
+      {
+        "product": "outagehub",
+        "n": 199
+      },
+      {
+        "product": "morrow",
+        "n": 56
+      },
+      {
+        "product": "unknown",
+        "n": 1
+      }
+    ],
+    "linkedin_connections": 766,
+    "linkedin_conversations": 376,
+    "cohorts": 12,
+    "sales_plays": 16,
+    "target_matches_unreviewed": 648
+  },
+  "debt": {
+    "open_next_actions": 331,
+    "open_actions_note": "All conversation-type, from LinkedIn import ~2026-07-15/16; carry no active_motion_id. Under new model => Watchlist/Backlog, never Today.",
+    "unresolved_merge_conflicts": 140,
+    "active_motions": "table not yet created"
+  },
+  "controller": "disabled (cron removed) during freeze; reinstall with: npm run controller:install"
+}

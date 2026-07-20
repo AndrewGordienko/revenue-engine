@@ -6,7 +6,7 @@ const day = () => now().slice(0, 10);
 const safe = (value) => String(value || "triage").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 export function normalizeProduct(value) {
-  return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
+  return value === "outagehub" || value === "ohub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 export function createPipelineLineage(database, {

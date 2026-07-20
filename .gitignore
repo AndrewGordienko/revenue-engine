@@ -1,5 +1,12 @@
 .openclaw-agents/
 openclaw-workspaces/
+connections.txt
+allchats.txt
+linkedins.txt
+output/
+tmp/
+*.db
+
 
 # Runtime data can contain prospect details, generated outreach, and local state.
 data/*
@@ -9,6 +16,9 @@ data/inputs/*
 !data/inputs/account-list.example.json
 !data/inputs/live-smoke-accounts.example.json
 !data/inputs/play-decisions.example.json
+!data/inputs/linkedin-profile-overrides.json
+!data/inputs/linkedin-connection-messages.json
+!data/inputs/morrow-linkedin-contacts.json
 !data/ontology/
 data/ontology/*
 !data/ontology/schema.yaml

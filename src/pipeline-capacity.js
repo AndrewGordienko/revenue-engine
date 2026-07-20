@@ -46,7 +46,9 @@ function commercialTargetFor(registry, agent) {
 }
 
 function productForAgent(agent) {
-  return agent?.slug?.startsWith("outagehub-") ? "outagehub" : "gnk";
+  if (agent?.slug?.startsWith("outagehub-")) return "outagehub";
+  if (agent?.slug?.startsWith("morrow-")) return "morrow";
+  return "gnk";
 }
 
 function bucketCounts(leads) {

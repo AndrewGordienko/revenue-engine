@@ -12,14 +12,15 @@ import { STRATEGY_VERSION } from "./sales-plays.js";
 export const ACTIVE_PLAYS = {
   gnk: ["GNK-AI-01", "GNK-BE-01", "GNK-DATA-01"],
   outagehub: ["OHUB-ISP-01", "OHUB-EMBED-01", "OHUB-FAC-01"],
+  morrow: ["MORROW-COPACK-01", "MORROW-CPG-01"],
 };
 
 // Accepted RAW product values in a manifest. Anything else is rejected outright
 // (never silently coerced to a brand).
-const RAW_PRODUCTS = new Set(["gnk", "outagehub", "ohub"]);
-const normalizeProduct = (p) => (p === "ohub" || p === "outagehub" ? "outagehub" : "gnk");
+const RAW_PRODUCTS = new Set(["gnk", "outagehub", "ohub", "morrow"]);
+const normalizeProduct = (p) => (p === "ohub" || p === "outagehub" ? "outagehub" : p === "morrow" ? "morrow" : "gnk");
 // Brand of a RAW product value, or null when the value is not a valid product.
-const brandOf = (raw) => (raw === "gnk" ? "gnk" : raw === "outagehub" || raw === "ohub" ? "outagehub" : null);
+const brandOf = (raw) => (raw === "gnk" ? "gnk" : raw === "outagehub" || raw === "ohub" ? "outagehub" : raw === "morrow" ? "morrow" : null);
 
 export function cohortGroupFor(product) {
   return `${normalizeProduct(product)}-live-smoke`;
@@ -53,9 +54,14 @@ export function validateManifest(accounts) {
     else if (!ACTIVE_PLAYS[brand].includes(a.play_id)) problems.push(`${where}: play ${a.play_id} is not an active ${brand} play`);
     if (a.domain) { if (domains.has(a.domain)) problems.push(`${where}: duplicate domain ${a.domain}`); domains.add(a.domain); }
   }
+  // Independent canaries: validate one-per-play + full coverage only for the brands
+  // ACTUALLY present in this manifest (a venture can run its smoke alone). The required
+  // count per brand is its number of active plays, not a hardcoded 3.
+  const brandsPresent = new Set(accounts.map((a) => brandOf(a.product)).filter(Boolean));
   for (const [product, plays] of Object.entries(ACTIVE_PLAYS)) {
+    if (!brandsPresent.has(product)) continue;
     const forBrand = accounts.filter((a) => brandOf(a.product) === product);
-    if (forBrand.length !== 3) problems.push(`${product}: expected exactly 3 accounts, got ${forBrand.length}`);
+    if (forBrand.length !== plays.length) problems.push(`${product}: expected exactly ${plays.length} accounts, got ${forBrand.length}`);
     for (const play of plays) {
       const n = forBrand.filter((a) => a.play_id === play).length;
       if (n !== 1) problems.push(`${product}: expected exactly one account for ${play}, got ${n}`);

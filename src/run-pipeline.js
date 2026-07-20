@@ -12,6 +12,7 @@ import { PIPELINES, planPipeline, normalizeProduct } from "./pipelines.js";
 import { isLiveSmokeMode, requireCohortForLiveSmoke, loadManifest } from "./smoke-live.js";
 import { ingestFromState } from "./ingest-leads.js";
 import { promoteSequencesFromState } from "./promote-sequences.js";
+import { promoteLinkedInFromState } from "./promote-linkedin.js";
 import { assertPlayConsistency } from "./play-consistency.js";
 
 // Which named pipelines close which side of the loop. cohort:build sources
@@ -36,9 +37,15 @@ async function runPostPipeline(pipelineName, product) {
     console.log(`[ingest] +${result.added} new, ${result.updated} updated, ${result.total} total leads`);
   }
   if (touches.promote) {
+    // LinkedIn-native promotion is the live path: turn the writer's
+    // linkedin_connection_messages into motion-bound pending drafts.
+    const li = await promoteLinkedInFromState(product);
+    if (!li) console.log("[promote:linkedin] no linkedin_connection_messages artifact in state — nothing to queue");
+    else console.log(`[promote:linkedin] ${li.accounts_queued} accounts, ${li.drafts_queued} drafts pending approval, ${li.skipped} skipped (${JSON.stringify(li.skipped_reasons)})`);
+    // Legacy email promotion is dormant (returns null without a reviewer artifact) and
+    // is removed from the live path in PR A (#14); kept here only until then.
     const summary = await promoteSequencesFromState(product);
-    if (!summary) console.log("[promote] no email-sequence-reviewer artifact in state — nothing to queue");
-    else console.log(`[promote] ${summary.accounts_queued} accounts queued, ${summary.messages_queued} messages pending approval, ${summary.skipped} skipped (${JSON.stringify(summary.skipped_reasons)})`);
+    if (summary) console.log(`[promote:email(legacy)] ${summary.accounts_queued} accounts queued, ${summary.messages_queued} messages pending approval, ${summary.skipped} skipped`);
   }
 }
 

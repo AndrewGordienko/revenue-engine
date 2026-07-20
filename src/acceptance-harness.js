@@ -116,8 +116,15 @@ export function engineeringGates(registry, fixtures = loadBenchmark()) {
   const controlOnCritical = registry.agents.filter((a) => a.criticalPath && a.executionTier === "control");
   const missingEmailFixtures = fixtures.filter((f) => f.label === "missing_email");
 
+  // A lead belongs to exactly one brand, so the per-lead critical path is the
+  // critical lead-tier count within a single brand, not summed across brands.
+  const brandOf = (slug) =>
+    slug.startsWith("outagehub-") ? "outagehub" : slug.startsWith("morrow-") ? "morrow" : "gnk";
+  const criticalLeadByBrand = criticalLead.reduce((m, a) => ((m[brandOf(a.slug)] = (m[brandOf(a.slug)] || 0) + 1), m), {});
+  const maxCriticalLeadPerBrand = Math.max(0, ...Object.values(criticalLeadByBrand));
+
   const gates = [
-    { gate: "per-lead critical path <= 6 model calls", pass: criticalLead.length <= 6, detail: `${criticalLead.length} lead-tier critical agents` },
+    { gate: "per-lead critical path <= 6 model calls", pass: maxCriticalLeadPerBrand <= 6, detail: `max ${maxCriticalLeadPerBrand} lead-tier critical agents per brand (${JSON.stringify(criticalLeadByBrand)})` },
     { gate: "no cross-brand sales-play leakage", pass: cls.cross_brand_leaks === 0, detail: `${cls.cross_brand_leaks} leaks` },
     { gate: "strategy agents never on the critical path", pass: controlOnCritical.length === 0, detail: `${controlOnCritical.length} control agents on critical path` },
     { gate: "zero guessed emails marked send-ready", pass: cls.missing_email_send_ready === 0 && missingEmailFixtures.every((f) => !f.email_best), detail: `${cls.missing_email_send_ready} send-ready without evidence` },

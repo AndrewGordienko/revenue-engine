@@ -58,7 +58,9 @@ function isDedupAwareAgent(agent) {
 
 function productForAgent(agent) {
   if ((agent.brands || []).length > 1) return "portfolio";
-  return agent.slug.startsWith("outagehub-") ? "outagehub" : "gnk";
+  if (agent.slug.startsWith("outagehub-")) return "outagehub";
+  if (agent.slug.startsWith("morrow-")) return "morrow";
+  return "gnk";
 }
 
 function commercialTargetFor(registry, agent) {
@@ -67,7 +69,8 @@ function commercialTargetFor(registry, agent) {
       portfolio: registry.portfolioStrategy,
       brands: {
         gnk: registry.commercialTarget,
-        outagehub: registry.commercialTargets?.outagehub
+        outagehub: registry.commercialTargets?.outagehub,
+        morrow: registry.commercialTargets?.morrow
       }
     };
   }
@@ -488,13 +491,15 @@ function buildCommercialStrategyBlock(agent) {
     "",
     `Binding commercial strategy — ${STRATEGY_VERSION}:`,
     "This block overrides any older pricing, volume, offer, or sequence language elsewhere in the prompt.",
-    "GNK and OutageHub share research/CRM infrastructure only; never transfer economics, offers, proof, sequence, or closing motion between them.",
+    "GNK, OutageHub, and Morrow share research/CRM infrastructure only; never transfer economics, offers, proof, sequence, or closing motion between them.",
     JSON.stringify({ portfolio: PORTFOLIO_STRATEGY, active_brand: product, sales_plays: plays, sequence_policy: policy, sequence_skeleton: skeleton }, null, 2),
     product === "gnk"
       ? "Enforce a one-deal, high-trust motion. Prefer warm introductions, observable triggers, and partners. Do not optimize for hundreds of generic cold emails. Only the three listed sprints may be presented externally; the paid one-week shaping engagement is the fallback."
       : product === "outagehub"
         ? "Enforce a paid-pilot motion. Do not lead with a low-price API subscription. Every proposal must separate implementation from recurring fees, name one workflow and success criteria, and create an annual conversion decision."
-        : "Research both brands, but assign every signal and cohort to exactly one brand and one active play. Never create a blended portfolio offer."
+        : product === "morrow"
+          ? "Enforce a paid-pilot-then-RaaS robotics motion. The outbound channel is LinkedIn: every serious lead needs a profile URL and a connection request under 300 characters, no links. Lead with the manual high-mix packing/kitting workflow and the automation gap fixed automation cannot economically close; the ask is a short discovery call, not a finished robot. Convert pilots into monthly per-cell RaaS."
+          : "Research both brands, but assign every signal and cohort to exactly one brand and one active play. Never create a blended portfolio offer."
   ].join("\n");
 }
 

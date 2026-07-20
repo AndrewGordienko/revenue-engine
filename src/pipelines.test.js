@@ -9,10 +9,10 @@ const { sequenceSkeleton } = await import("./sequence-skeleton.js");
 
 const registry = JSON.parse(fs.readFileSync(path.join(process.cwd(), "agents", "registry.json"), "utf8"));
 
-test("lead:prepare runs only the lead-tier critical agents (the reduced live path)", () => {
+test("lead:prepare restores the person-to-message LinkedIn path", () => {
   const slugs = selectPipelineAgents(registry, "lead:prepare", "gnk").map((a) => a.slug);
-  assert.deepEqual(slugs, ["gnk-client-dossier", "gnk-email-drafter", "gnk-email-sequence-reviewer"]);
-  // The ≤6-model-call gate: approved account → reviewed sequence is 3 lead calls.
+  assert.deepEqual(slugs, ["gnk-lead-persona-profile", "gnk-client-dossier", "gnk-outreach-angle", "gnk-email-drafter"]);
+  // The ≤6-model-call gate: verified person → grounded LinkedIn note is 4 lead calls.
   assert.ok(slugs.length <= 6, "per-lead critical path must stay at or under six model calls");
 });
 

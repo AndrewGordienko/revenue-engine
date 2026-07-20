@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sales OS — Today</title>
+<style>
+  :root {
+    --bg: #faf9f7; --surface: #ffffff; --line: #e7e4df; --ink: #1c1a17; --muted: #6b6660;
+    --inset: #f4f2ef; --amber: #b45309; --green: #15803d; --red: #b91c1c;
+    --gnk-bg: #EEEDFE; --gnk-fg: #3C3489;
+    --ohub-bg: #E1F5EE; --ohub-fg: #085041;
+    --morrow-bg: #FAECE7; --morrow-fg: #712B13;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#151311; --surface:#1e1b18; --line:#2e2a26; --ink:#f2efea; --muted:#a49d94; --inset:#242019; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Inter",Segoe UI,Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color: inherit; }
+  .topbar { display:flex; align-items:center; gap:16px; padding:12px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:10; }
+  .brand { font-weight:500; font-size:15px; }
+  .pills { display:flex; gap:6px; margin-left:8px; }
+  .pill { padding:4px 12px; border:1px solid var(--line); border-radius:999px; background:var(--surface); cursor:pointer; font-size:13px; color:var(--muted); }
+  .pill[aria-selected="true"] { color:var(--ink); font-weight:500; }
+  .pill.gnk[aria-selected="true"] { background:var(--gnk-bg); color:var(--gnk-fg); border-color:transparent; }
+  .pill.outagehub[aria-selected="true"] { background:var(--ohub-bg); color:var(--ohub-fg); border-color:transparent; }
+  .pill.morrow[aria-selected="true"] { background:var(--morrow-bg); color:var(--morrow-fg); border-color:transparent; }
+  .pill.all[aria-selected="true"] { background:var(--inset); color:var(--ink); border-color:transparent; }
+  .spacer { flex:1; }
+  .today-badge { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  .legacy { font-size:12px; color:var(--muted); text-decoration:none; }
+  main { max-width:900px; margin:0 auto; padding:20px; }
+  .scorecards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+  .metric { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px; }
+  .metric .v { font-size:24px; font-weight:500; }
+  .metric .k { font-size:12px; color:var(--muted); }
+  .queue-head { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .queue-head .title { font-size:15px; font-weight:500; }
+  .bar { flex:1; height:6px; background:var(--inset); border-radius:999px; overflow:hidden; }
+  .bar > i { display:block; height:100%; background:var(--green); width:0; transition:width .4s ease; }
+  @media (prefers-reduced-motion: reduce) { .bar > i { transition:none; } }
+  .cards { display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px; outline:none; }
+  .card:focus-visible, .card.focused { box-shadow:0 0 0 2px var(--gnk-fg); }
+  .card .head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .vbadge { font-size:11px; padding:2px 8px; border-radius:999px; }
+  .vbadge.gnk { background:var(--gnk-bg); color:var(--gnk-fg); }
+  .vbadge.outagehub { background:var(--ohub-bg); color:var(--ohub-fg); }
+  .vbadge.morrow { background:var(--morrow-bg); color:var(--morrow-fg); }
+  .who { font-weight:500; }
+  .sub { color:var(--muted); }
+  .chip { margin-left:auto; font-size:12px; color:var(--muted); }
+  .context { color:var(--muted); margin-bottom:8px; }
+  .draft { background:var(--inset); border-radius:8px; padding:10px; white-space:pre-wrap; font-size:13px; }
+  textarea.draft { width:100%; border:1px solid var(--line); resize:vertical; min-height:80px; color:var(--ink); }
+  .btns { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  button { font:inherit; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--gnk-fg); color:#fff; border-color:transparent; }
+  button.quiet { color:var(--muted); }
+  .nav { display:flex; gap:4px; margin-left:8px; }
+  .nav button { background:transparent; border:none; color:var(--muted); padding:4px 8px; border-radius:6px; }
+  .nav button[aria-current="true"] { color:var(--ink); font-weight:500; background:var(--inset); }
+  .board { display:flex; gap:12px; overflow-x:auto; padding-bottom:8px; }
+  .col { min-width:200px; flex:1; }
+  .col h3 { font-size:12px; font-weight:500; color:var(--muted); margin:0 0 8px; display:flex; justify-content:space-between; }
+  .bcard { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; border-left:3px solid transparent; }
+  .bcard.stalled { border-left-color:var(--amber); }
+  .bcard .amt { color:var(--green); font-size:12px; }
+  .bcard .adv { margin-top:6px; font-size:12px; padding:3px 8px; }
+  .search { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--ink); margin-bottom:12px; }
+  table.people { width:100%; border-collapse:collapse; }
+  table.people td, table.people th { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; }
+  table.people th { color:var(--muted); font-weight:500; }
+  table.people tr { cursor:pointer; }
+  .drawer { margin-top:16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; }
+  .tl { list-style:none; padding:0; margin:8px 0 0; }
+  .tl li { padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .tl .t { color:var(--muted); font-size:11px; }
+  .funnel { display:flex; gap:12px; margin-bottom:16px; }
+  .funnel .step { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; flex:1; }
+  .funnel .step .v { font-size:22px; font-weight:500; }
+  .cash { font-size:28px; font-weight:500; margin:16px 0; }
+  .cash small { color:var(--muted); font-size:14px; font-weight:400; }
+  .buckets { display:flex; gap:16px; margin-top:20px; font-size:12px; color:var(--muted); }
+  .buckets b { color:var(--ink); font-weight:500; }
+  .empty { text-align:center; padding:48px 20px; color:var(--muted); }
+  .done-panel { text-align:center; padding:32px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:8px; font-size:13px; display:none; gap:12px; align-items:center; }
+  .toast button { background:transparent; color:var(--bg); border:none; text-decoration:underline; padding:0; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">Sales OS</span>
+    <div class="nav" id="nav">
+      <button data-view="today" aria-current="true">Today</button>
+      <button data-view="pipeline">Pipeline</button>
+      <button data-view="people">People</button>
+      <button data-view="review">Review</button>
+    </div>
+    <div class="pills" id="pills"></div>
+    <span class="spacer"></span>
+    <span class="today-badge" id="todayBadge">Today 0</span>
+    <button class="legacy" id="adminLink" style="background:none;border:none;cursor:pointer">Admin</button>
+    <a class="legacy" href="/legacy" title="The previous dashboard">Legacy ↗</a>
+  </div>
+  <main>
+    <div class="scorecards" id="scorecards"></div>
+    <div class="queue-head"><span class="title" id="queueTitle">Today</span><span class="bar"><i id="queueBar"></i></span></div>
+    <div class="cards" id="cards"></div>
+    <div class="buckets" id="buckets"></div>
+    <div class="board" id="board" style="display:none"></div>
+    <div id="people" style="display:none"></div>
+    <div id="review" style="display:none"></div>
+    <div id="admin" style="display:none"></div>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script src="/cockpit.js"></script>
+</body>
+</html>

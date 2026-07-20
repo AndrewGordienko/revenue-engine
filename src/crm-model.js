@@ -299,6 +299,10 @@ export function identity(row) {
   const domain = slug(row.company_domain);
   const li = linkedinSlug(row.linkedin_url || row.linkedin_or_source);
   if (domain && li) return { key: `d:${domain}|li:${li}`, confidence: "strong" };
+  // A direct LinkedIn /in/ slug is globally person-specific even when account
+  // research has not found the company domain yet. Treating it as strong keeps
+  // future imports from recreating the same contact under a new cohort.
+  if (li) return { key: `li:${li}`, confidence: "strong" };
   if (domain && row.email_best && (row.verified || row.address_found_or_guessed === "verified")) return { key: `d:${domain}|e:${row.email_best.toLowerCase()}`, confidence: "strong" };
   if (domain && row.name) return { key: `d:${domain}|n:${slug(row.name)}`, confidence: "weak" };
   return { key: `id:${row.id}`, confidence: "weak" };

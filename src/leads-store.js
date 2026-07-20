@@ -17,7 +17,7 @@ async function safeMemory(product, event) {
 }
 
 function normalizeProduct(value) {
-  return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
+  return value === "outagehub" || value === "ohub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 // Legacy stage vocabulary the dashboard UI still speaks.

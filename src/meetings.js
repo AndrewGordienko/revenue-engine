@@ -37,8 +37,12 @@ export async function bookMeeting({ lead_id, starts_at, ends_at, timezone = "Eur
   const external = await provider.createMeeting({ summary: `Discovery — ${lead.company}`, description: `Conversation with ${lead.name} about ${lead.play_id}.`, starts_at, ends_at, timezone, attendees: resolvedAttendees });
   const brief = buildCallBrief(lead_id, database);
   const t = now();
-  const info = database.prepare(`INSERT INTO meetings(lead_id,opportunity_id,status,starts_at,ends_at,timezone,attendees,provider,provider_event_id,conference_url,brief,created_at,updated_at)
-    VALUES(?,?,'booked',?,?,?,?, 'google_calendar',?,?,?,?,?)`).run(lead_id, opportunity_id, starts_at, ends_at, timezone, JSON.stringify(resolvedAttendees), external.event_id, external.conference_url || null, JSON.stringify(brief), t, t);
+  const info = database.prepare(`INSERT INTO meetings(lead_id,opportunity_id,status,starts_at,ends_at,timezone,attendees,provider,provider_event_id,conference_url,brief,
+    confirmation_status,time_confidence,intent,created_at,updated_at)
+    VALUES(?,?,'booked',?,?,?,?, 'google_calendar',?,?,?,'calendar_confirmed','confirmed','commercial_discovery',?,?)`).run(
+      lead_id, opportunity_id, starts_at, ends_at, timezone, JSON.stringify(resolvedAttendees), external.event_id,
+      external.conference_url || null, JSON.stringify(brief), t, t,
+    );
   const meeting = database.prepare("SELECT * FROM meetings WHERE id=?").get(Number(info.lastInsertRowid));
   await recordRevenueEvent({ lead_id, type: "meeting", occurred_at: t, source: "calendar-sync", dedupe_key: `calendar:meeting:${external.event_id}`, payload: { meeting_id: meeting.id, starts_at, ends_at, timezone, attendees: resolvedAttendees, provider_event_id: external.event_id, conference_url: external.conference_url || null } }, database);
   return meeting;

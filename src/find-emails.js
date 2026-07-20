@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 const BATCH_SIZE = 25;
 
 function normalizeProduct(value) {
-  return value === "outagehub" || value === "ohub" ? "outagehub" : "gnk";
+  return value === "outagehub" || value === "ohub" ? "outagehub" : value === "morrow" ? "morrow" : "gnk";
 }
 
 function emailFinderSlug(product) {
