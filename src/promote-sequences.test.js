@@ -18,7 +18,27 @@ const { listOutreachMessages } = await import("./outreach-queue.js");
 const { STRATEGY_VERSION } = await import("./sales-plays.js");
 const { promoteReviewerArtifact, matchLead, normalizeReadiness } = await import("./promote-sequences.js");
 
-const REVIEWER = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "artifacts", "gnk-email-sequence-reviewer-full.json"), "utf8"));
+// Synthetic reviewer artifact (was a gitignored local file — now a self-contained fixture
+// so the test passes from a fresh clone / CI). Same shape promoteReviewerArtifact consumes:
+// improved_person_email_sequences[] with person_name/company/website/send_readiness/emails[],
+// each email carrying touch_number + recommended_subject + body + grounding_used.
+const REVIEWER = {
+  improved_person_email_sequences: [
+    {
+      person_name: "Ada Founder", title: "CTO", company: "Northstar AI", website: "https://northstar.ai", send_readiness: "ready",
+      emails: [
+        { touch_number: 1, recommended_subject: "Your data pipeline", body: "Hi Ada — saw Northstar is hiring data engineers.", grounding_used: [{ claim: "hiring data engineers", source_url: "https://northstar.ai/careers" }] },
+        { touch_number: 2, recommended_subject: "One more thought", body: "Following up with a specific idea on the pipeline.", grounding_used: [] },
+      ],
+    },
+    { person_name: "Ben Buyer", title: "VP Eng", company: "Harbour Systems", website: "https://harbour.io", send_readiness: "ready",
+      emails: [{ touch_number: 1, recommended_subject: "Your platform migration", body: "Hi Ben — on the platform migration.", grounding_used: [] }] },
+    { person_name: "Cara Ops", title: "COO", company: "Tide", website: "https://tide.co", send_readiness: "needs_human_review",
+      emails: [{ touch_number: 1, recommended_subject: "Your ops workflow", body: "Hi Cara — about the ops workflow.", grounding_used: [] }] },
+    { person_name: "Dot None", title: "Founder", company: "Nomatch Inc", website: "https://nomatch.example", send_readiness: "ready",
+      emails: [{ touch_number: 1, recommended_subject: "Quick question", body: "Hi Dot — quick question.", grounding_used: [] }] },
+  ],
+};
 const SEQS = REVIEWER.improved_person_email_sequences || [];
 
 after(() => { _closeForTest(); fs.rmSync(temp, { recursive: true, force: true }); });
@@ -31,12 +51,12 @@ test("readiness is only 'ready' when the reviewer says ready AND the touch is gr
 
 test("a real sequence whose lead carries a play_id and a contact is queued end to end", async () => {
   const database = db();
-  const seq = SEQS[0]; // Trigger.dev / Eric Allam — a real reviewed sequence
+  const seq = SEQS[0]; // Ada Founder / Northstar AI — a reviewed sequence
   // Seed the lead exactly as cohort:build would, carrying the play_id + a verified contact.
   await upsertLeads([{
-    name: seq.person_name, title: seq.title, company: seq.company, company_domain: "trigger.dev",
-    play_id: "GNK-BE-01", email_best: "eric@trigger.dev", email_status: "found", verified: true,
-    address_found_or_guessed: "verified", source_url: "https://trigger.dev",
+    name: seq.person_name, title: seq.title, company: seq.company, company_domain: "northstar.ai",
+    play_id: "GNK-BE-01", email_best: "ada@northstar.ai", email_status: "found", verified: true,
+    address_found_or_guessed: "verified", source_url: "https://northstar.ai",
   }], "gnk", { cohort_id: "gnk-be-01-test", play_id: "GNK-BE-01", strategy_version: STRATEGY_VERSION, stage: "test" });
 
   const matched = matchLead(database, "gnk", seq);
@@ -50,7 +70,7 @@ test("a real sequence whose lead carries a play_id and a contact is queued end t
   const msgs = listOutreachMessages({ lead_id: matched.id }, database);
   assert.equal(msgs.length, seq.emails.length, "one queued message per touch");
   assert.ok(msgs.every((m) => m.status === "pending_approval"), "every message is pending_approval — nothing approved");
-  assert.ok(msgs.every((m) => m.recipient === "eric@trigger.dev"), "recipient is the canonical verified contact");
+  assert.ok(msgs.every((m) => m.recipient === "ada@northstar.ai"), "recipient is the canonical verified contact");
   assert.ok(msgs.every((m) => m.subject && m.body), "every message has a subject and body");
   const withEvidence = msgs.filter((m) => JSON.parse(m.evidence || "[]").length > 0);
   assert.ok(withEvidence.length > 0, "grounded touches carry their evidence");
