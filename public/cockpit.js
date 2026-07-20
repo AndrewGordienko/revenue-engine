@@ -35,6 +35,8 @@ async function load() {
     state.data.review = await api(`/api/review?${v}&window=week`);
   } else if (state.view === "admin") {
     state.data.admin = await api(`/api/admin`);
+  } else if (state.view === "connect") {
+    state.data.connect = await api(`/api/connect-queue?${v}&cap=150`);
   } else {
     const [queue, scorecard, buckets] = await Promise.all([
       api(`/api/queue?${v}`), api(`/api/scorecard?${v}&window=week`), api(`/api/queue/buckets?${v}`),
@@ -247,6 +249,28 @@ function renderAdmin() {
     <h3 class="sub" style="margin-top:16px">Cohorts</h3>${rows(a.cohorts, ["cohort_id", "product", "play_id", "status"])}`;
 }
 
+function renderConnect() {
+  const q = state.data.connect, host = $("connect");
+  if (!q) { host.innerHTML = ""; return; }
+  const blocks = q.buckets.map((b) => `<div style="margin-bottom:20px">
+    <h3 class="sub" style="margin:0 0 2px">${esc(b.label)} — ${b.people.length}/${b.target}</h3>
+    <div class="sub" style="margin-bottom:8px">${esc(b.job)}</div>
+    ${b.people.map((p) => `<div class="card" data-cid="${p.connection_id}">
+      <div class="head"><span class="vbadge ${p.venture}">${esc(p.venture)}</span><span class="who">${esc(p.name)}</span><span class="sub">${esc(String(p.headline||"").slice(0,60))}</span><span class="chip">${esc(p.role||"")}</span></div>
+      <div class="draft">${esc(p.suggested_note)}</div>
+      <div class="btns">
+        <button class="primary" data-cop="copy" data-note="${esc(p.suggested_note)}">Copy note</button>
+        ${p.profile_url ? `<a href="${esc(p.profile_url)}" target="_blank" rel="noopener"><button>Open profile</button></a>` : ""}
+        <button data-cop="sent" data-cid="${p.connection_id}">Mark sent</button>
+      </div></div>`).join("") || `<div class="sub" style="padding:8px">— none available in this bucket for this venture —</div>`}
+  </div>`).join("");
+  host.innerHTML = `<div class="sub" style="margin-bottom:12px">${q.total} warm-network actions for <b>${esc(q.venture)}</b> this week. ${esc(q.note)}<br/>These are people you already know — edit each note, copy it, send on LinkedIn, then Mark sent so it drops off next week.</div>${blocks}`;
+  host.querySelectorAll("[data-cop]").forEach((el) => el.onclick = async () => {
+    if (el.dataset.cop === "copy") { await navigator.clipboard.writeText(el.dataset.note || "").catch(()=>{}); toast("Note copied"); }
+    else { await api(`/api/connect/${el.dataset.cid}/sent`, { method: "POST" }); toast("Marked sent"); const card = el.closest(".card"); if (card) card.style.opacity = 0.4; }
+  });
+}
+
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
 function render() {
@@ -255,12 +279,13 @@ function render() {
   const show = (id, on) => { const el = typeof id === "string" ? $(id) : id; if (el) el.style.display = on ? "" : "none"; };
   show("scorecards", view === "today"); show(document.querySelector(".queue-head"), view === "today");
   show("cards", view === "today"); show("buckets", view === "today");
-  show("board", view === "pipeline"); show("people", view === "people"); show("review", view === "review"); show("admin", view === "admin");
+  show("board", view === "pipeline"); show("people", view === "people"); show("review", view === "review"); show("admin", view === "admin"); show("connect", view === "connect");
   if (view === "today") { renderScorecards(); renderCards(); renderBuckets(); }
   else if (view === "pipeline") renderPipeline();
   else if (view === "people") renderPeople();
   else if (view === "review") renderReview();
   else if (view === "admin") renderAdmin();
+  else if (view === "connect") renderConnect();
   const al = $("adminLink"); if (al) al.onclick = () => { state.view = "admin"; load(); };
 }
 
