@@ -29,6 +29,7 @@ import { buildBoard, stageGate } from "./pipeline-board.js";
 import { recordContractSigned } from "./offers.js";
 import { buildPeopleIndex, buildPersonPage } from "./people-view.js";
 import { buildReview } from "./review-view.js";
+import { buildWeeklyQueue } from "./weekly-outreach.js";
 import {
   captureMeetingOutcome,
   confirmMeeting,
@@ -455,6 +456,20 @@ const server = http.createServer(async (request, response) => {
     }
     if (url.pathname === "/api/review" && request.method === "GET") {
       sendJson(response, 200, buildReview(db(), { venture: cockpitVenture(url), window: url.searchParams.get("window") || "week" }));
+      return;
+    }
+    // ---- Connect: this week's warm-network outreach list (Finder-lite from your graph) ----
+    if (url.pathname === "/api/connect-queue" && request.method === "GET") {
+      sendJson(response, 200, buildWeeklyQueue(db(), { venture: cockpitVenture(url), cap: Number(url.searchParams.get("cap") || 150) }));
+      return;
+    }
+    const connectSentMatch = url.pathname.match(/^\/api\/connect\/(\d+)\/sent$/);
+    if (connectSentMatch && request.method === "POST") {
+      try {
+        const t = new Date().toISOString();
+        db().prepare("UPDATE linkedin_connections SET contacted_at=?, contact_channel='linkedin', updated_at=? WHERE id=?").run(t, t, Number(connectSentMatch[1]));
+        sendJson(response, 200, { ok: true, id: Number(connectSentMatch[1]), contacted_at: t });
+      } catch (error) { sendJson(response, 400, { ok: false, error: error.message }); }
       return;
     }
     if (url.pathname === "/api/admin" && request.method === "GET") {
