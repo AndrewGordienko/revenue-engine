@@ -12,6 +12,7 @@ import { readState } from "./bus.js";
 import { normalizeVenture, getOpenMotionForLead, openMotion } from "./active-motions.js";
 import { queueDraft } from "./linkedin-drafts.js";
 import { canActivate } from "./account-score.js";
+import { lintMessage } from "./message-validator.js";
 
 const norm = (s) => String(s || "").toLowerCase().trim();
 
@@ -60,7 +61,11 @@ function promoteOne(database, venture, msg, { pipeline_run_id }) {
     motion_id: motion.id, message_kind: "connection_note", touch_number: 1, body,
     evidence, writer_version: msg.generation_model || null, linkedin_profile_url: profile, pipeline_run_id,
   });
-  return { status: "queued", lead_id: lead.id, account_key: motion.account_key, motion_id: motion.id, draft_id: draft.id };
+  // Lint the STORED body (dashes already stripped by queueDraft) so a weak message is
+  // flagged for the founder's review rather than shipped silently. Never blocks the draft —
+  // the human still approves — but surfaces length-band / banned-phrase / claim warnings.
+  const lint = lintMessage(draft.body, { message_kind: "connection_note", must_not_claim: msg.claims_to_avoid || [] });
+  return { status: "queued", lead_id: lead.id, account_key: motion.account_key, motion_id: motion.id, draft_id: draft.id, lint };
 }
 
 // Promote every LinkedIn message in an artifact. Returns an explicit outcome for each
@@ -72,15 +77,18 @@ export function promoteLinkedInMessages(artifact, venture, database = db(), { pi
   const skipped_reasons = {};
   const accounts = new Set();
   let drafts_queued = 0;
+  let weak_drafts = 0;
   for (const msg of messages) {
     const outcome = promoteOne(database, v, msg, { pipeline_run_id });
     results.push(outcome);
-    if (outcome.status === "queued") { drafts_queued++; accounts.add(outcome.account_key); }
-    else skipped_reasons[outcome.reason] = (skipped_reasons[outcome.reason] || 0) + 1;
+    if (outcome.status === "queued") {
+      drafts_queued++; accounts.add(outcome.account_key);
+      if (outcome.lint && !outcome.lint.ok) weak_drafts++;
+    } else skipped_reasons[outcome.reason] = (skipped_reasons[outcome.reason] || 0) + 1;
   }
   return {
     venture: v, messages: messages.length, accounts_queued: accounts.size,
-    drafts_queued, skipped: messages.length - drafts_queued, skipped_reasons, results,
+    drafts_queued, weak_drafts, skipped: messages.length - drafts_queued, skipped_reasons, results,
   };
 }
 
