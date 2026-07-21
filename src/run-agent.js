@@ -694,6 +694,19 @@ function isCapacityError(error) {
   return /capacity|rate limit|rate-limit|temporarily unavailable|try again|overloaded|429/i.test(errorText(error));
 }
 
+// A model the agent asked for is not available on THIS account/tier (e.g. gpt-5.6 on a
+// ChatGPT-account Codex login returns a 400 "model is not supported"). This is not a
+// transient capacity blip, but it should still fall through to the next configured model
+// rather than hard-failing the whole run — the account simply cannot serve that tier.
+function isModelUnavailableError(error) {
+  return /not supported when using|model is not supported|do(es)? not have access|model_not_found|unknown model|no matching models\.providers/i.test(errorText(error));
+}
+
+// Either reason justifies trying the next model in the fallback chain.
+function shouldTryNextModel(error) {
+  return isCapacityError(error) || isModelUnavailableError(error);
+}
+
 function isCapacityText(text) {
   // `\b429\b` (not a bare `429`) so digits inside URLs/ids like ".../jobs/4290673009"
   // don't read as an HTTP 429. Callers must also gate this to short responses:
@@ -788,9 +801,9 @@ async function runOpenClawAgent(agent, prompt) {
       return { response, modelUsed: model };
     } catch (error) {
       lastError = error;
-      if (!isCapacityError(error)) throw error;
+      if (!shouldTryNextModel(error)) throw error;
       if (model === models[models.length - 1]) break;
-      console.warn(`${agent.slug}: ${model} unavailable; retrying with next real model fallback.`);
+      console.warn(`${agent.slug}: ${model} unavailable (${isModelUnavailableError(error) ? "not on this account/tier" : "capacity"}); retrying with next real model fallback.`);
     }
   }
 
