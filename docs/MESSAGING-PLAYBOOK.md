@@ -90,6 +90,29 @@ tables but is not yet a cockpit view — today you compare at the *funnel/cohort
 If message-level "what's working" becomes the question after two weeks of real data, that's the
 next small feature to add (a Playbooks > Messaging panel reading those tables).
 
+## 7b. How to chat once they reply (the post-reply flow)
+Log the reply (sentiment) → it stops the sequence → then respond by type. Keep replying in
+the same voice: short, one idea, one question. Never dump the deck.
+
+- **Relevant / curious** → confirm + narrow, then propose times:
+  > "Makes sense. What's the one workflow that's most painful right now? Happy to grab 20 min —
+  > I'm open Tue 2pm or Thu morning your time, or send a slot that works."
+- **Friendly but vague** → find the owner + the timing:
+  > "Good to hear from you. Is this something your team is actively trying to fix this quarter,
+  > or more background? And who tends to own it internally?"
+- **Objection (the Carol / OutageHub pattern — "we already have X, e.g. SCADA")** → don't argue,
+  reframe the layer you add:
+  > "Totally — you'd keep [their system] as the source of truth on your own network. Where teams
+  > use us is the *external, cross-provider* view: is this our fault or the grid's, before a truck
+  > rolls. Worth 20 min to see if that layer saves you dispatches?"
+- **Router / referral** → thank + ask permission + go:
+  > "Appreciate it. Mind if I mention you when I reach out to [name]?"
+- **Not now** → record a dated trigger, no pressure:
+  > "No problem at all. I'll check back after [event/quarter]. If [trigger] changes sooner, ping me."
+- **Positive → book** → confirm the meeting (Calendar), then prep the call brief from the dossier
+  (their background + the company signal + the offer shape). A call with no scheduled date is not
+  an opportunity — book it or it isn't real.
+
 ## 8. Draft quality note
 Grounded, per-person drafts come from the LinkedIn **writer agent**, which needs an API key
 (`cp .env.example .env`, set your key). Without it, drafts are deterministic templates — **edit

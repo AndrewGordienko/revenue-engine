@@ -22,14 +22,35 @@ export const BUCKETS = [
   { key: "dormant", label: "Reactivate (dormant)", target: 25, roles: null, job: "People you already talked to who went quiet 6+ months ago — the cheapest pipeline you own." },
 ];
 
-// A short, honest opener per bucket (edit before sending). No links, question-led.
+// A first-DM opener per bucket, in the founder's PROVEN voice (the Nulogy / Give & Go /
+// Carol threads): short, human, curious, one specific angle + one low-pressure call ask,
+// no em-dashes, no deck. These go to people you're ALREADY connected to. Edit the bracketed
+// specifics before sending — grounding in a real company signal is what makes it land.
+function companyOf(c) {
+  const h = String(c.headline || "");
+  const m = h.match(/\bat\s+([A-Z][\w&.\- ]{1,40})/);
+  return (m && m[1].trim()) || "your company";
+}
 function suggestedNote(bucket, c, venture) {
   const first = String(c.name || "there").trim().split(/\s+/)[0];
-  const v = venture === "outagehub" ? "OutageHub" : venture === "morrow" ? "Morrow" : "GNK";
-  if (bucket === "routers") return `Hi ${first} — quick one. Who do you know whose team is drowning in a stuck backend/data/automation project right now? ${v} has capacity for one or two, happy to owe you one.`;
-  if (bucket === "dormant") return `Hi ${first} — it's been a while. I've been heads-down building ${v}; curious what you're working on these days. Worth catching up?`;
-  if (bucket === "ecosystem") return `Hi ${first} — I follow the space you're in and wanted to connect properly. No pitch — trading notes on what's actually breaking in ops/eng right now.`;
-  return `Hi ${first} — wanted to ask you something specific. When a backend/data/automation project gets stuck at ${c.company_hint || "your company"}, does the team absorb it, hire, or bring in a small outside team? Trying to learn where ${v} is genuinely useful.`;
+  const co = companyOf(c);
+  if (bucket === "routers") {
+    return `Hi ${first}, quick one. My small senior software + AI team (GNK) has room for one or two serious backend, data, or automation projects this quarter. Who do you know whose team is stuck or understaffed on something like that? Happy to return the favour.`;
+  }
+  if (bucket === "dormant") {
+    return `Hi ${first}, it's been a while. I've been heads-down building on the engineering + AI side and you came to mind. What are you working on these days? Would be good to catch up properly, no agenda.`;
+  }
+  if (bucket === "ecosystem") {
+    return `Hi ${first}, I follow the space you're in and wanted to connect properly rather than just click accept. No pitch. I'm trying to learn where real operational and engineering work is breaking right now. Open to trading notes sometime?`;
+  }
+  // direct_owners — the Nulogy voice: curious about their engineering, no deck.
+  if (venture === "morrow") {
+    return `Hi ${first}, your work at ${co} caught my eye. I'm researching which packing and kitting tasks on the line stay manual and where adaptive robotics could realistically improve throughput, before building the wrong thing. Would you be open to a short call to trade notes on where the real pain is?`;
+  }
+  if (venture === "outagehub") {
+    return `Hi ${first}, I've been looking at how ops teams at places like ${co} separate a grid outage from their own fault when tickets spike. I'm building a Canada-wide outage feed and trying to learn where that actually costs you time today. Worth a quick 20 minutes to compare notes?`;
+  }
+  return `Hi ${first}, thanks for connecting. I've been looking more closely at ${co} and I'm genuinely curious what the engineering behind it looks like day to day, the kind of problems that are hard to get right at scale. I run a small senior software and AI team at GNK. Rather than guess where we'd fit, I'd love to hear what your team is working on and where delivery tends to slow down. Open to a quick call next week? I'm not coming with a deck.`;
 }
 
 const norm = (v) => String(v || "").toLowerCase();
