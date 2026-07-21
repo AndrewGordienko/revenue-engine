@@ -2484,7 +2484,7 @@
       ],
       "workspace": "openclaw-workspaces/salesv3-morrow-email-drafter",
       "agentDir": ".openclaw-agents/salesv3-morrow-email-drafter/agent",
-      "model": "openai/gpt-5.5",
+      "model": "openai/gpt-5.6",
       "modelFallbacks": [
         "openai/gpt-5.4-mini"
       ],
