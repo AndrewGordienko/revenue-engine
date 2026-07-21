@@ -34,6 +34,9 @@ function companyOf(c) {
 function suggestedNote(bucket, c, venture) {
   const first = String(c.name || "there").trim().split(/\s+/)[0];
   const co = companyOf(c);
+  // In the "All" view `venture` is null — use the PERSON's own venture so a Morrow or
+  // OutageHub contact never gets a GNK-flavoured note.
+  const v = venture && venture !== "all" ? venture : (c.primary_product || "gnk");
   if (bucket === "routers") {
     return `Hi ${first}, quick one. My small senior software + AI team (GNK) has room for one or two serious backend, data, or automation projects this quarter. Who do you know whose team is stuck or understaffed on something like that? Happy to return the favour.`;
   }
@@ -44,10 +47,10 @@ function suggestedNote(bucket, c, venture) {
     return `Hi ${first}, I follow the space you're in and wanted to connect properly rather than just click accept. No pitch. I'm trying to learn where real operational and engineering work is breaking right now. Open to trading notes sometime?`;
   }
   // direct_owners — the Nulogy voice: curious about their engineering, no deck.
-  if (venture === "morrow") {
+  if (v === "morrow") {
     return `Hi ${first}, your work at ${co} caught my eye. I'm researching which packing and kitting tasks on the line stay manual and where adaptive robotics could realistically improve throughput, before building the wrong thing. Would you be open to a short call to trade notes on where the real pain is?`;
   }
-  if (venture === "outagehub") {
+  if (v === "outagehub") {
     return `Hi ${first}, I've been looking at how ops teams at places like ${co} separate a grid outage from their own fault when tickets spike. I'm building a Canada-wide outage feed and trying to learn where that actually costs you time today. Worth a quick 20 minutes to compare notes?`;
   }
   return `Hi ${first}, thanks for connecting. I've been looking more closely at ${co} and I'm genuinely curious what the engineering behind it looks like day to day, the kind of problems that are hard to get right at scale. I run a small senior software and AI team at GNK. Rather than guess where we'd fit, I'd love to hear what your team is working on and where delivery tends to slow down. Open to a quick call next week? I'm not coming with a deck.`;
@@ -73,6 +76,7 @@ export function buildWeeklyQueue(database = db(), { venture = null, cap = 150 } 
     FROM linkedin_connections c
     JOIN linkedin_conversations conv ON conv.connection_id = c.id
     WHERE (conv.last_inbound_at IS NULL OR conv.last_inbound_at < date('now','-180 day'))
+      AND c.contacted_at IS NULL AND c.review_status != 'suppressed'
       ${venture ? "AND c.primary_product = ?" : ""}
     ORDER BY conv.last_message_at DESC`).all(...vArgs);
 

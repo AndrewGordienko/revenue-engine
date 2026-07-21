@@ -35,6 +35,7 @@ before(() => {
   conn(d, { role: "needs_context" });         // ecosystem
   conn(d, { role: "buyer", contacted: true }); // excluded (already contacted)
   conn(d, { role: "buyer", product: "outagehub" }); // other venture
+  conn(d, { role: "buyer", product: "morrow" });    // for the All-view venture test
   // dormant: a connection with a stale conversation
   const dc = conn(d, { role: "early_career" });
   d.prepare(`INSERT INTO linkedin_conversations(identity_key,name,product,connection_id,status,last_inbound_at,last_message_at,created_at,updated_at)
@@ -49,6 +50,14 @@ test("relationship_role maps to the right bucket; contacted + other-venture are 
   assert.ok(byKey.direct_owners.every((p) => p.venture === "gnk"));
   assert.ok(!q.buckets.flatMap((b) => b.people).some((p) => p.role === "buyer" && p.venture === "outagehub"), "other-venture buyer not in gnk queue");
   assert.ok(q.buckets.flatMap((b) => b.people).every((p) => p.suggested_note && p.suggested_note.length > 0), "every person has a suggested note");
+});
+
+test("the All view uses each person's OWN venture voice, not a GNK fallback", () => {
+  const all = buildWeeklyQueue(db(), { venture: null });
+  const morrow = all.buckets.flatMap((b) => b.people).find((p) => p.venture === "morrow" && p.bucket === "direct_owners");
+  assert.ok(morrow, "a morrow owner is in the All-view queue");
+  assert.match(morrow.suggested_note, /packing|kitting|robotics/i, "morrow contact gets the morrow voice");
+  assert.doesNotMatch(morrow.suggested_note, /the engineering behind/, "not the GNK note");
 });
 
 test("dormant conversations resurface in the reactivate bucket", () => {

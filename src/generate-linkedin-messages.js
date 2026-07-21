@@ -40,7 +40,7 @@ function schema(expectedCount) {
           additionalProperties: false,
           required: [
             "person_name", "company", "linkedin_url", "observed_signal", "why_this_person",
-            "what_we_can_do", "connection_message", "evidence_urls", "generation_model"
+            "stance", "connection_message", "evidence_urls", "generation_model"
           ],
           properties: {
             person_name: { type: "string" },
@@ -48,7 +48,10 @@ function schema(expectedCount) {
             linkedin_url: { type: "string" },
             observed_signal: { type: "string" },
             why_this_person: { type: "string" },
-            what_we_can_do: { type: "string" },
+            // The move to make. curious_question = a peer inquiry with NO capability claim
+            // (the Nulogy pattern). Only bounded_claim uses what_we_can_do.
+            stance: { type: "string", enum: ["curious_question", "bounded_claim", "route_ask"] },
+            what_we_can_do: { type: ["string", "null"] },
             connection_message: { type: "string", maxLength: 299 },
             evidence_urls: { type: "array", items: { type: "string" } },
             generation_model: { type: "string", enum: [MODEL] }
@@ -73,7 +76,12 @@ Rules:
 - Maximum 299 characters including spaces. Aim for 180 to 270 characters.
 - Never use an em dash or en dash. Use commas, periods, parentheses, or a colon.
 - Use one specific supplied observed signal and connect it to this person's role.
-- Say one concrete thing the product can do for the relevant workflow.
+- Choose a stance. For senior buyers, a "curious_question" (a genuine peer inquiry about how
+  their operation works, with NO product claim and an explicit no-pitch stance, like "rather
+  than guessing where we could fit") usually outperforms a pitch. Use "bounded_claim" only
+  when a concrete capability is genuinely relevant, and put it in what_we_can_do. Use
+  "route_ask" when the person is a router, not the owner. Under curious_question, what_we_can_do
+  is null and the message must NOT claim a capability.
 - Write like a technically credible founder, plain and direct.
 - Do not invent a post, quote, personal interest, mutual connection, customer, metric, pain, project, or outcome.
 - When the evidence is role-level, be explicit that the ownership link is a hypothesis.
