@@ -141,7 +141,7 @@ test("promotion is idempotent — a second run does not duplicate drafts", () =>
   promoteLinkedInMessages(artifact, "gnk", database);
   const after = listDrafts(database, { lead_id: pLead1 }).length;
   assert.equal(after, before, "re-promotion upserts the same draft, never duplicates");
-  assert.equal(listDrafts(database, { lead_id: pLead1 })[0].body, "Hi Pia — updated opener.");
+  assert.equal(listDrafts(database, { lead_id: pLead1 })[0].body, "Hi Pia, updated opener."); // em dash stripped at queue time
 });
 
 test("listDrafts scopes by venture and review_status", () => {

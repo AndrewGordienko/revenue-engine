@@ -7,6 +7,7 @@
 // The cold "150 new connection requests to strangers" motion needs the sourcing/Finder
 // layer (Tier-1 collectors) — this fills the warm lane from data you already have.
 import { db } from "./db.js";
+import { stripDashes } from "./message-validator.js";
 
 // relationship_role -> bucket. Owners are the targets; routers manufacture intro paths
 // (the bucket people skip and the highest ROI for warm-intro motions); ecosystem builds
@@ -124,6 +125,6 @@ function personRow(c, bucket, venture) {
     connection_id: c.id, name: c.name, headline: c.headline, profile_url: c.profile_url,
     venture: c.primary_product, role: c.relationship_role, bucket,
     score: c.classification_score,
-    suggested_note: suggestedNote(bucket, c, venture),
+    suggested_note: stripDashes(suggestedNote(bucket, c, venture)),
   };
 }

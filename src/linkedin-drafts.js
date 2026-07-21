@@ -8,6 +8,7 @@
 import { db } from "./db.js";
 import { getLead } from "./crm-model.js";
 import { getMotion } from "./active-motions.js";
+import { stripDashes } from "./message-validator.js";
 
 const now = () => new Date().toISOString();
 const KINDS = new Set(["connection_note", "direct_message", "follow_up", "reply"]);
@@ -32,6 +33,8 @@ export function queueDraft(database, {
 } = {}) {
   if (!KINDS.has(message_kind)) throw new Error(`queueDraft: invalid message_kind ${message_kind}`);
   if (!body || !String(body).trim()) throw new Error("queueDraft: body is required");
+  // Every draft is dash-free at the source — an em/en dash can never reach the founder.
+  body = stripDashes(body);
   if (!Number.isInteger(Number(touch_number))) throw new Error("queueDraft: touch_number must be an integer");
 
   const motion = getMotion(database, motion_id);
